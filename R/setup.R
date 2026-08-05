@@ -24,7 +24,6 @@ library(lhs)
 library(sensitivity)
 library(rpart)
 library(rpart.plot)
-library(readxl)
 library(parallel)
 
 options(ggpattern_use_R4.1_features = FALSE)

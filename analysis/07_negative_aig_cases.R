@@ -1,14 +1,5 @@
 # Parameter sets where asynchrony REDUCES incidence in area 1: Figure S12
 #
-# data/raw/AIG_neg.xlsx holds the ten parameter sets from the 10,000 simulations
-# of 04_sensitivity_simulations.R whose AIG in area 1 comes out negative, listed
-# in Supplementary Table S3. In these settings area 2 is highly endemic and
-# strongly controlled, so stopping and restarting its control produces large
-# rebounds; area 1 has R_C < 1 and would eliminate in isolation but cannot,
-# because of sustained importation. Under asynchrony area 1 is controlling while
-# area 2 is not, which damps those rebounds enough to outweigh the loss of a
-# lower trough.
-#
 # Each set is re-simulated and drawn with the same conventions as the case-study
 # figures, sorted by increasing AIG per year, so the most negative case comes
 # first.
@@ -27,19 +18,10 @@ source(here::here("R", "setup.R"))
 # Parameter sets
 # --------------------------------------------------------------------------
 
-params <- as.data.frame(read_excel(raw_path("AIG_neg.xlsx")))
+params <- read.csv(derived_path("df_simulations.csv")) %>%
+  filter(AIG_area1 < 0) %>%
+  arrange(AIG_year_area1)
 
-# Files exported before the switch to the paper's [0, 0.5] convention name the
-# efficacy and mobility columns W_1/W_2/p_1/p_2. The VALUES already are the
-# paper's, so only the names need mapping.
-legacy_names <- c(W_1 = "omega_1", W_2 = "omega_2", p_1 = "p_12", p_2 = "p_21")
-for (old in names(legacy_names)) {
-  if (old %in% names(params) && !(legacy_names[[old]] %in% names(params))) {
-    names(params)[names(params) == old] <- legacy_names[[old]]
-  }
-}
-
-params <- params[order(params$AIG_year_area1), ]
 cat("Parameter sets with a negative AIG:", nrow(params), "\n")
 
 # --------------------------------------------------------------------------

@@ -22,7 +22,6 @@ packages <- c(
   "rpart", "rpart.plot",  # classification trees
 
   # Input/output
-  "readxl",
   "here"
 )
 
