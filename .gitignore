@@ -1,0 +1,26 @@
+# R session files
+.Rhistory
+.RData
+.Rproj.user/
+.Ruserdata
+
+# Compiled odin / C artefacts
+*.o
+*.so
+*.dll
+*.dylib
+
+# renv library (the lockfile IS tracked, the library is not)
+renv/library/
+renv/local/
+renv/staging/
+renv/python/
+
+# Batch-job leftovers
+data/derived/checkpoint_metrics_computation.csv
+*.out
+slurm-*.out
+
+# OS noise
+.DS_Store
+Thumbs.db
