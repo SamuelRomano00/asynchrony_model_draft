@@ -11,13 +11,13 @@
 #                                          R_C,1 < 1 and R_C,1 in [0.9, 1.1]
 #   figures/figureS7_recovery_duration_heatmap.png  mean AIG by recovery time
 #                                          and intervention duration
-#   data/derived/tableS1_metric_quantiles.csv       quantiles of both metrics
+#   data/tableS1_metric_quantiles.csv       quantiles of both metrics
 
 source(here::here("R", "setup.R"))
 
-df <- read.csv(derived_path("df_simulations.csv"))
-sobol_AIG <- read.csv(derived_path("sobol_AIG.csv"))
-sobol_AIGR <- read.csv(derived_path("sobol_AIGR.csv"))
+df <- read.csv(data_path("df_simulations.csv"))
+sobol_AIG <- read.csv(data_path("sobol_AIG.csv"))
+sobol_AIGR <- read.csv(data_path("sobol_AIGR.csv"))
 
 # A rank-based version of the AIGR indices is also available as
 # sobol_AIGR_rank.csv; substitute it here to check the raw-scale indices against
@@ -263,5 +263,5 @@ stats <- df %>%
             mean = mean(value),
             .groups = "drop")
 
-write.csv(stats, derived_path("tableS1_metric_quantiles.csv"), row.names = FALSE)
+write.csv(stats, data_path("tableS1_metric_quantiles.csv"), row.names = FALSE)
 print(stats)

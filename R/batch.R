@@ -148,7 +148,7 @@ metrics_computation <- function(myvars, ncores = detect_ncores(), checkpoint_eve
         format(Sys.time() - t0), "\n")
 
     write.csv(as.data.frame(do.call(rbind, all_chunks)),
-              derived_path("checkpoint_metrics_computation.csv"), row.names = FALSE)
+              data_path("checkpoint_metrics_computation.csv"), row.names = FALSE)
   }
 
   as.data.frame(do.call(rbind, all_chunks))

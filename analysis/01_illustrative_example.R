@@ -10,7 +10,7 @@
 # Outputs:
 #   figures/figure2_illustrative_example.png
 #   figures/figureS1_interruption.png
-#   data/derived/table2_illustrative_example.csv
+#   data/table2_illustrative_example.csv
 
 source(here::here("R", "setup.R"))
 
@@ -86,4 +86,4 @@ ggsave(figure_path("figureS1_interruption.png"),
        width = 9, height = 5, units = "in", dpi = 600)
 
 write.csv(build_publication_table(metrics$summary, all_incidence),
-          derived_path("table2_illustrative_example.csv"), row.names = FALSE)
+          data_path("table2_illustrative_example.csv"), row.names = FALSE)

@@ -17,7 +17,7 @@ renv/staging/
 renv/python/
 
 # Batch-job leftovers
-data/derived/checkpoint_metrics_computation.csv
+data/checkpoint_metrics_computation.csv
 *.out
 slurm-*.out
 

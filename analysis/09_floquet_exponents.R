@@ -11,7 +11,7 @@
 # and no stochasticity are involved; each run is a single ODE integration over
 # one intervention cycle and takes under a second.
 #
-# Outputs: data/derived/tableS4_floquet_exponents.csv
+# Outputs: data/tableS4_floquet_exponents.csv
 
 source(here::here("R", "setup.R"))
 
@@ -65,7 +65,7 @@ case_results <- bind_rows(lapply(names(CASE_STUDIES), function(label) {
 
 results <- bind_rows(illustrative, case_results)
 
-write.csv(results, derived_path("tableS4_floquet_exponents.csv"), row.names = FALSE)
+write.csv(results, data_path("tableS4_floquet_exponents.csv"), row.names = FALSE)
 
 # --------------------------------------------------------------------------
 # Interpretation

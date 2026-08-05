@@ -6,7 +6,7 @@
 # template. Everything downstream reads the CSVs written here, so 05 and 06 can
 # be re-run freely without touching this script.
 #
-# Outputs, all in data/derived/:
+# Outputs, all in data/:
 #   LHS1.csv, LHS2.csv          the two independent Latin hypercube designs
 #   df_simulations.csv          parameters and metrics for every design point
 #   sobol_design_Y.csv          AIG and AIGR over the full Sobol design
@@ -61,15 +61,15 @@ build_lhs_design <- function(n, seed) {
 X1 <- build_lhs_design(design_size, SEED_LHS1)
 X2 <- build_lhs_design(design_size, SEED_LHS2)
 
-write.csv(X1, derived_path("LHS1.csv"), row.names = FALSE)
-write.csv(X2, derived_path("LHS2.csv"), row.names = FALSE)
+write.csv(X1, data_path("LHS1.csv"), row.names = FALSE)
+write.csv(X2, data_path("LHS2.csv"), row.names = FALSE)
 
 # --------------------------------------------------------------------------
 # Simulation database
 # --------------------------------------------------------------------------
 
 df <- metrics_computation(X1)
-write.csv(df, derived_path("df_simulations.csv"), row.names = FALSE)
+write.csv(df, data_path("df_simulations.csv"), row.names = FALSE)
 
 # --------------------------------------------------------------------------
 # Sobol design
@@ -87,7 +87,7 @@ sobol_design_full <- sobolSalt(model = NULL, X1[myvars], X2[myvars],
 colnames(sobol_design_full$X) <- myvars
 
 Y_full <- AIG_AIGR_computation(sobol_design_full$X)
-write.csv(Y_full, derived_path("sobol_design_Y.csv"), row.names = FALSE)
+write.csv(Y_full, data_path("sobol_design_Y.csv"), row.names = FALSE)
 
 #' Rows of a design whose parameters admit an endemic equilibrium
 check_valid_prevalence <- function(Xdf) {
@@ -171,10 +171,10 @@ tell(sobol_AIGR_obj, Y$AIGR_year_area1)
 sobol_AIGR_rank_obj <- sobol_design
 tell(sobol_AIGR_rank_obj, rank(Y$AIGR_year_area1, ties.method = "average"))
 
-write.csv(collect_indices(sobol_AIG_obj), derived_path("sobol_AIG.csv"), row.names = FALSE)
-write.csv(collect_indices(sobol_AIGR_obj), derived_path("sobol_AIGR.csv"), row.names = FALSE)
-write.csv(collect_indices(sobol_AIGR_rank_obj), derived_path("sobol_AIGR_rank.csv"), row.names = FALSE)
+write.csv(collect_indices(sobol_AIG_obj), data_path("sobol_AIG.csv"), row.names = FALSE)
+write.csv(collect_indices(sobol_AIGR_obj), data_path("sobol_AIGR.csv"), row.names = FALSE)
+write.csv(collect_indices(sobol_AIGR_rank_obj), data_path("sobol_AIGR_rank.csv"), row.names = FALSE)
 
-write.csv(collect_indices_S2(sobol_AIG_obj), derived_path("sobol_AIG_S2.csv"), row.names = FALSE)
-write.csv(collect_indices_S2(sobol_AIGR_obj), derived_path("sobol_AIGR_S2.csv"), row.names = FALSE)
-write.csv(collect_indices_S2(sobol_AIGR_rank_obj), derived_path("sobol_AIGR_rank_S2.csv"), row.names = FALSE)
+write.csv(collect_indices_S2(sobol_AIG_obj), data_path("sobol_AIG_S2.csv"), row.names = FALSE)
+write.csv(collect_indices_S2(sobol_AIGR_obj), data_path("sobol_AIGR_S2.csv"), row.names = FALSE)
+write.csv(collect_indices_S2(sobol_AIGR_rank_obj), data_path("sobol_AIGR_rank_S2.csv"), row.names = FALSE)

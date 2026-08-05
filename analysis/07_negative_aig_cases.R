@@ -18,7 +18,7 @@ source(here::here("R", "setup.R"))
 # Parameter sets
 # --------------------------------------------------------------------------
 
-params <- read.csv(derived_path("df_simulations.csv")) %>%
+params <- read.csv(data_path("df_simulations.csv")) %>%
   filter(AIG_area1 < 0) %>%
   arrange(AIG_year_area1)
 

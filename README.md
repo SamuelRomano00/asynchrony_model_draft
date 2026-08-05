@@ -88,8 +88,7 @@ R/                    functions, no side effects, never run directly
   tables.R            publication tables
 
 analysis/             one script per figure or table, run in order
-data/raw/             inputs not produced by this code
-data/derived/         everything the scripts write
+data/         everything the scripts write
 figures/              all figures
 inst/hpc/             cluster submission template for 04
 ```

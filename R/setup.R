@@ -36,22 +36,16 @@ options(ggpattern_use_R4.1_features = FALSE)
 # a cluster job, with no working-directory assumptions.
 # ---------------------------------------------------------------------------
 
-dir_raw <- here::here("data", "raw")
-dir_derived <- here::here("data", "derived")
+dir_data <- here::here("data")
 dir_figures <- here::here("figures")
 
-dir.create(dir_derived, showWarnings = FALSE, recursive = TRUE)
+dir.create(dir_data, showWarnings = FALSE, recursive = TRUE)
 dir.create(dir_figures, showWarnings = FALSE, recursive = TRUE)
 
-#' Build a path inside `data/raw`
+#' Build a path inside `data`
 #' @param ... Path components, passed to `file.path()`.
 #' @return A character path.
-raw_path <- function(...) file.path(dir_raw, ...)
-
-#' Build a path inside `data/derived`
-#' @param ... Path components, passed to `file.path()`.
-#' @return A character path.
-derived_path <- function(...) file.path(dir_derived, ...)
+data_path <- function(...) file.path(dir_data, ...)
 
 #' Build a path inside `figures`
 #' @param ... Path components, passed to `file.path()`.

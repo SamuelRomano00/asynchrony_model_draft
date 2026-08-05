@@ -14,7 +14,7 @@
 # Outputs:
 #   figures/figure5_case_studies.png
 #   figures/figureS13_case_studies_interruption.png
-#   data/derived/tableS4_case_studies.csv
+#   data/tableS4_case_studies.csv
 
 source(here::here("R", "setup.R"))
 
@@ -124,4 +124,4 @@ ggsave(figure_path("figureS13_case_studies_interruption.png"),
 # --------------------------------------------------------------------------
 
 write.csv(bind_rows(lapply(results, `[[`, "table")),
-          derived_path("tableS4_case_studies.csv"), row.names = FALSE)
+          data_path("tableS4_case_studies.csv"), row.names = FALSE)

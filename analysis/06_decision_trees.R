@@ -15,8 +15,8 @@
 #   figures/figureS9_bootstrap_stability.png     variable and first-split stability
 #   figures/figureS10_bootstrap_tree_size.png    tree-size distribution
 #   figures/figureS11_decision_tree_AIGR.png     top-decile tree, AIGR instead
-#   data/derived/decision_tree_summary.csv       one row per threshold definition
-#   data/derived/decision_tree_bootstrap.csv     first-split threshold stability
+#   data/decision_tree_summary.csv       one row per threshold definition
+#   data/decision_tree_bootstrap.csv     first-split threshold stability
 
 source(here::here("R", "setup.R"))
 
@@ -24,7 +24,7 @@ source(here::here("R", "setup.R"))
 # assigns folds at random, and the stability analysis resamples the database.
 set.seed(123)
 
-df <- read.csv(derived_path("df_simulations.csv"))
+df <- read.csv(data_path("df_simulations.csv"))
 
 AIG_variable <- "AIG_year_area1"
 n_bootstrap <- 500
@@ -53,7 +53,7 @@ tree_summary <- data.frame(
   row.names = NULL
 )
 print(tree_summary)
-write.csv(tree_summary, derived_path("decision_tree_summary.csv"), row.names = FALSE)
+write.csv(tree_summary, data_path("decision_tree_summary.csv"), row.names = FALSE)
 
 cat("\nVariable importance, top-decile tree:\n")
 print(sort(trees[["10%"]]$tree$variable.importance, decreasing = TRUE))
@@ -103,7 +103,7 @@ cat("\nTree size (terminal nodes):\n")
 print(summary(boot$n_leaves))
 
 write.csv(boot$first_split_thresholds,
-          derived_path("decision_tree_bootstrap.csv"), row.names = FALSE)
+          data_path("decision_tree_bootstrap.csv"), row.names = FALSE)
 
 ggsave(figure_path("figureS9_bootstrap_stability.png"),
        plot_bootstrap_stability(boot), width = 16, height = 12, dpi = 300)
