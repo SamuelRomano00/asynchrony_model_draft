@@ -445,9 +445,10 @@ plot_metric_by_parameter <- function(data, param, metric, bin_width, name_param,
     geom_line(aes(y = I_median), color = "blue", linewidth = 1) +
     labs(x = name_param) +
     theme_minimal() +
-    theme(axis.title.x = element_text(size = 10),
-          axis.text.x = element_text(size = 7.5),
-          axis.text.y = element_text(size = 7.5))
+    theme(axis.title.x = element_text(size = 12),
+          axis.title.x = element_text(size = 12),
+          axis.text.x = element_text(size = 10),
+          axis.text.y = element_text(size = 10))
 
   p <- if (y_name) p + labs(y = y_label) else p + theme(axis.title.y = element_blank())
   if (y_percent) p <- p + scale_y_continuous(labels = scales::percent)
