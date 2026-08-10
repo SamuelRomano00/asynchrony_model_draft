@@ -33,7 +33,19 @@ AIG_TREE_PREDICTORS <- c("R0_1", "R0_2", "omega_1", "omega_2",
 build_aig_tree <- function(data, quantile_high, response = "AIG_year_area1",
                            predictors = AIG_TREE_PREDICTORS) {
 
-  threshold <- quantile(data[[response]], quantile_high, na.rm = TRUE)
+  # AIGR is a ratio whose denominator is the synchronous case count, so it is
+  # undefined wherever the synchronous scenario eliminated transmission inside
+  # the metric window. Those rows carry no information about what separates high
+  # from low values and would poison the quantile, the labelling and the class
+  # weights, so they are dropped rather than passed to rpart as NA.
+  n_before <- nrow(data)
+  data <- data[is.finite(data[[response]]), , drop = FALSE]
+  if (nrow(data) < n_before) {
+    message(sprintf("build_aig_tree(): dropped %d of %d rows with a non-finite %s.",
+                    n_before - nrow(data), n_before, response))
+  }
+  
+  threshold <- quantile(data[[response]], quantile_high)
 
   data$label_AIG_tree <- factor(
     ifelse(data[[response]] >= threshold, "High", "Low"),
@@ -196,7 +208,7 @@ plot_aig_tree <- function(fit, title) {
   renamed[is.na(renamed)] <- as.character(tree$frame$var)[is.na(renamed)]
   tree$frame$var <- unname(renamed)
 
-  rpart.plot(tree, extra = 104, main = title, cex = 0.9,
+  rpart.plot(tree, extra = 104, main = title, cex = 0.9, tweak=1.2,
              box.palette = colorRampPalette(c("gold", "green3"))(4))
 
   invisible(NULL)

@@ -22,7 +22,7 @@ source(here::here("R", "setup.R"))
 
 # The trees depend on the RNG twice over: rpart's 10-fold cross-validation
 # assigns folds at random, and the stability analysis resamples the database.
-set.seed(123)
+set.seed(12)
 
 df <- read.csv(data_path("df_simulations.csv"))
 
@@ -62,7 +62,7 @@ print(sort(trees[["10%"]]$tree$variable.importance, decreasing = TRUE))
 # Figure 4: the top-decile tree
 # --------------------------------------------------------------------------
 
-png(figure_path("figure4_decision_tree.png"), width = 10, height = 7,
+png(figure_path("figure4_decision_tree.png"), width = 16, height = 9,
     units = "in", res = 300)
 plot_aig_tree(trees[["10%"]], "High AIG: top 10%")
 dev.off()
@@ -125,7 +125,7 @@ cat("\nAIGR tree, threshold:", tree_AIGR$threshold,
     "- terminal nodes:", tree_n_leaves(tree_AIGR$tree), "\n")
 print(sort(tree_AIGR$tree$variable.importance, decreasing = TRUE))
 
-png(figure_path("figureS11_decision_tree_AIGR.png"), width = 10, height = 7,
+png(figure_path("figureS11_decision_tree_AIGR.png"), width = 16, height = 9,
     units = "in", res = 300)
 plot_aig_tree(tree_AIGR, "High AIGR: top 10%")
 dev.off()
