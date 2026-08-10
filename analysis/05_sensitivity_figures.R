@@ -1,4 +1,4 @@
-# Uncertainty and sensitivity analysis: Figure 3 and Supplementary S3, S5, S7, T1
+# Uncertainty and sensitivity analysis: Figure 3 and Supplementary S3, S4, S6, T1
 #
 # Reads the CSVs written by 04_sensitivity_simulations.R. No simulation happens
 # here, so this script is cheap to re-run while adjusting a figure.
@@ -7,9 +7,9 @@
 #   figures/figure3_sensitivity_AIG.png    distribution, Sobol indices and
 #                                          parameter profiles, AIG per year in area 1
 #   figures/figureS3_sensitivity_AIGR.png  the same for the AIGR per year
-#   figures/figureS5_near_elimination.png  AIG and AIGR restricted to
+#   figures/figureS4_near_elimination.png  AIG and AIGR restricted to
 #                                          R_C,1 < 1 and R_C,1 in [0.9, 1.1]
-#   figures/figureS7_recovery_duration_heatmap.png  mean AIG by recovery time
+#   figures/figureS6_recovery_duration_heatmap.png  mean AIG by recovery time
 #                                          and intervention duration
 #   data/tableS1_metric_quantiles.csv       quantiles of both metrics
 
@@ -200,7 +200,7 @@ df_RC1_around1 <- df[df$RC_1 >= 0.9 & df$RC_1 <= 1.1, ]
 cat("Simulations with RC_1 < 1         :", nrow(df_RC1_below1), "\n")
 cat("Simulations with RC_1 in [0.9,1.1]:", nrow(df_RC1_around1), "\n")
 
-figure_S5 <-
+figure_S4 <-
   (make_metric_hist(df_RC1_below1, "AIG_year_area1",
                     title = "AIG per year in Area 1",
                     subtitle = expression(R[C] ~ "in area 1 < 1"),
@@ -218,7 +218,7 @@ figure_S5 <-
                       subtitle = expression(R[C] ~ "in area 1 in [0.9, 1.1]"),
                       x_label = "AIGR per year in Area 1", percent = TRUE))
 
-ggsave(figure_path("figureS5_near_elimination.png"), figure_S5)
+ggsave(figure_path("figureS4_near_elimination.png"), figure_S4)
 
 # --------------------------------------------------------------------------
 # Recovery time against intervention duration
@@ -229,19 +229,38 @@ ggsave(figure_path("figureS5_near_elimination.png"), figure_S5)
 # --------------------------------------------------------------------------
 
 heatmap_df <- df %>%
-  mutate(rinv_bin = cut(rinv, breaks = seq(60, 200, by = 10))) %>%
+  mutate(rinv_bin = cut(rinv, breaks = c(seq(60, 190, by = 10), 200 + 1e-10), right = FALSE,
+                        include.lowest = TRUE)) %>%
   filter(!is.na(rinv_bin)) %>%
   group_by(rinv_bin, time_intervention) %>%
   summarise(mean_AIG = mean(AIG_year_area1, na.rm = TRUE), .groups = "drop")
+
+levels(heatmap_df$rinv_bin)[length(levels(heatmap_df$rinv_bin))] <- "[190,200]"
 
 ggplot(heatmap_df, aes(x = rinv_bin, y = factor(time_intervention), fill = mean_AIG)) +
   geom_tile() +
   scale_fill_viridis_c(name = "Mean AIG") +
   labs(x = "Recovery time (days)", y = "Duration of intervention") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme_bw() +
+  theme(
+    panel.border = element_rect(
+      colour = "grey47",
+      fill = NA,
+      linewidth = 0.8
+    ),
+    axis.line = element_line(colour = "grey47"),
+    axis.ticks = element_line(colour = "grey47"),
+    axis.text = element_text(colour = "grey47"),
+    axis.title = element_text(colour = "grey47"),
+    
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      colour = "grey47"
+    )
+  )
 
-ggsave(figure_path("figureS7_recovery_duration_heatmap.png"),
+ggsave(figure_path("figureS6_recovery_duration_heatmap.png"),
        width = 9, height = 6, dpi = 300)
 
 # --------------------------------------------------------------------------

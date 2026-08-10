@@ -1,4 +1,4 @@
-# Decision trees for high-AIG scenarios: Figure 4 and Figures S8, S9, S10, S11
+# Decision trees for high-AIG scenarios: Figure 4 and Figures S7, S8, S9, S10
 #
 # A different question from the Sobol analysis: not which parameters drive the
 # AIG, but under what explicit decision rules asynchrony produces an impact of
@@ -11,10 +11,10 @@
 #
 # Outputs:
 #   figures/figure4_decision_tree.png            top-decile tree
-#   figures/figureS8_decision_tree_thresholds.png  the same at five thresholds
-#   figures/figureS9_bootstrap_stability.png     variable and first-split stability
-#   figures/figureS10_bootstrap_tree_size.png    tree-size distribution
-#   figures/figureS11_decision_tree_AIGR.png     top-decile tree, AIGR instead
+#   figures/figureS7_decision_tree_thresholds.png  the same at five thresholds
+#   figures/figureS8_bootstrap_stability.png     variable and first-split stability
+#   figures/figureS9_bootstrap_tree_size.png    tree-size distribution
+#   figures/figureS10_decision_tree_AIGR.png     top-decile tree, AIGR instead
 #   data/decision_tree_summary.csv       one row per threshold definition
 #   data/decision_tree_bootstrap.csv     first-split threshold stability
 
@@ -68,10 +68,10 @@ plot_aig_tree(trees[["10%"]], "High AIG: top 10%")
 dev.off()
 
 # --------------------------------------------------------------------------
-# Figure S8: the same at five thresholds
+# Figure S7: the same at five thresholds
 # --------------------------------------------------------------------------
 
-png(figure_path("figureS8_decision_tree_thresholds.png"), width = 16, height = 18,
+png(figure_path("figureS7_decision_tree_thresholds.png"), width = 16, height = 18,
     units = "in", res = 300)
 # base graphics, so the panels are arranged with par() rather than patchwork
 par(mfrow = c(3, 2))
@@ -82,7 +82,7 @@ par(mfrow = c(1, 1))
 dev.off()
 
 # --------------------------------------------------------------------------
-# Figures S9 and S10: bootstrap stability
+# Figures S8 and S9: bootstrap stability
 #
 # CART is known to be sensitive to sample perturbations, so the question is not
 # whether individual trees are identical but whether they are built around the
@@ -105,14 +105,14 @@ print(summary(boot$n_leaves))
 write.csv(boot$first_split_thresholds,
           data_path("decision_tree_bootstrap.csv"), row.names = FALSE)
 
-ggsave(figure_path("figureS9_bootstrap_stability.png"),
+ggsave(figure_path("figureS8_bootstrap_stability.png"),
        plot_bootstrap_stability(boot), width = 16, height = 12, dpi = 300)
 
-ggsave(figure_path("figureS10_bootstrap_tree_size.png"),
+ggsave(figure_path("figureS9_bootstrap_tree_size.png"),
        plot_tree_size_distribution(boot$n_leaves), width = 10, height = 6, dpi = 300)
 
 # --------------------------------------------------------------------------
-# Figure S11: the same tree built on the AIGR
+# Figure S10: the same tree built on the AIGR
 #
 # AIG and AIGR rank scenarios differently near the elimination threshold, where
 # a small synchronous case count inflates the ratio, so the tree is refitted on
@@ -125,7 +125,7 @@ cat("\nAIGR tree, threshold:", tree_AIGR$threshold,
     "- terminal nodes:", tree_n_leaves(tree_AIGR$tree), "\n")
 print(sort(tree_AIGR$tree$variable.importance, decreasing = TRUE))
 
-png(figure_path("figureS11_decision_tree_AIGR.png"), width = 16, height = 9,
+png(figure_path("figureS10_decision_tree_AIGR.png"), width = 16, height = 9,
     units = "in", res = 300)
 plot_aig_tree(tree_AIGR, "High AIGR: top 10%")
 dev.off()

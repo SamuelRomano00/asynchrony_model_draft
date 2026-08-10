@@ -1,4 +1,4 @@
-# Effect of the intervention cycle length: Supplementary Figure S6
+# Effect of the intervention cycle length: Supplementary Figure S5
 #
 # Same scenario as the illustrative example, deterministic, with the on/off
 # period length varied from 1 to 5 years instead of held at 5. One stacked
@@ -6,7 +6,7 @@
 # cycle is also a longer delay before area 2 starts, and a longer break
 # afterwards.
 #
-# Outputs: figures/figureS6_intervention_duration.png
+# Outputs: figures/figureS5_intervention_duration.png
 
 source(here::here("R", "setup.R"))
 
@@ -93,7 +93,7 @@ visualize_incidence(all_incidence,
                     metrics_labels = metrics_labels,
                     facet_rows = "length_intervention", AIG = TRUE)
 
-ggsave(figure_path("figureS6_intervention_duration.png"),
+ggsave(figure_path("figureS5_intervention_duration.png"),
        width = 10, height = 18, dpi = 600)
 
 # --------------------------------------------------------------------------

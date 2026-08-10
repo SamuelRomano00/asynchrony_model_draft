@@ -1,4 +1,4 @@
-# Case studies A to D: Figure 5, Supplementary Figure S13 and Table S4
+# Case studies A to D: Figure 5, Supplementary Figure S12 and Table S4
 #
 # Four settings chosen among the high-AIG scenarios of the sensitivity analysis,
 # with intervention timings and recovery times consistent with real malaria
@@ -13,7 +13,7 @@
 #
 # Outputs:
 #   figures/figure5_case_studies.png
-#   figures/figureS13_case_studies_interruption.png
+#   figures/figureS12_case_studies_interruption.png
 #   data/tableS4_case_studies.csv
 
 source(here::here("R", "setup.R"))
@@ -116,7 +116,7 @@ ggsave(figure_path("figure5_case_studies.png"),
        width = 10, height = 14, units = "in", dpi = 600)
 
 stack_panels(lapply(results, `[[`, "plot_interruption"), "Years")
-ggsave(figure_path("figureS13_case_studies_interruption.png"),
+ggsave(figure_path("figureS12_case_studies_interruption.png"),
        width = 10, height = 17, units = "in", dpi = 600)
 
 # --------------------------------------------------------------------------

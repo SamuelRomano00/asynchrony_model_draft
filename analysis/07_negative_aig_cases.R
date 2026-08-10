@@ -1,4 +1,4 @@
-# Parameter sets where asynchrony REDUCES incidence in area 1: Figure S12
+# Parameter sets where asynchrony REDUCES incidence in area 1: Figure S11
 #
 # Each set is re-simulated and drawn with the same conventions as the case-study
 # figures, sorted by increasing AIG per year, so the most negative case comes
@@ -9,8 +9,8 @@
 # is twenty ODE solves: a few seconds, no parallelism needed.
 #
 # Outputs:
-#   figures/figureS12_negative_aig_cases.png       the assembled 5x2 grid
-#   figures/figureS12_negative_aig_cases/case_*.png one panel per parameter set
+#   figures/figureS11_negative_aig_cases.png       the assembled 5x2 grid
+#   figures/figureS11_negative_aig_cases/case_*.png one panel per parameter set
 
 source(here::here("R", "setup.R"))
 
@@ -142,10 +142,10 @@ for (y_boundary in (1:4) / 5) {
 figure_neg <- cowplot::plot_grid(grid_with_lines, shared_legend,
                                  ncol = 1, rel_heights = c(0.94, 0.06))
 
-ggsave(figure_path("figureS12_negative_aig_cases.png"), figure_neg,
+ggsave(figure_path("figureS11_negative_aig_cases.png"), figure_neg,
        width = 24, height = 32, limitsize = FALSE)
 
-case_dir <- figure_path("figureS12_negative_aig_cases")
+case_dir <- figure_path("figureS11_negative_aig_cases")
 dir.create(case_dir, showWarnings = FALSE)
 for (i in seq_along(panels)) {
   ggsave(file.path(case_dir, paste0("case_", i, ".png")), panels[[i]],
