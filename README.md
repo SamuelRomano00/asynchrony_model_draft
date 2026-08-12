@@ -117,6 +117,8 @@ identically from RStudio (open `asynchrony.Rproj`), from the command line
 (`Rscript analysis/01_illustrative_example.R`), and from a cluster job. No
 script changes the working directory.
 
+sensitivity pulls in a large dependency tree (dtwclust, shiny, sf and their own dependencies), none of which this project calls directly. On a managed HPC system, sf and s2 may need gdal-bin and libabsl-dev — load the corresponding modules if renv::restore() reports them as missing.
+
 ## Reproducing the results
 
 Scripts 05, 06 and 07 read what 04 writes; the rest are independent. The first

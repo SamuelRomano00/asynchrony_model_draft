@@ -9,6 +9,7 @@
 packages <- c(
   # Models
   "odin",        # compiles the ODE systems
+  "pkgbuild",    # lets odin compile to C rather than falling back to R
   "TiPS",        # exact stochastic simulation
 
   # Data handling and figures

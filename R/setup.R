@@ -4,6 +4,10 @@
 #' project actually uses, defines the output directories, and sources the rest
 #' of `R/`. Nothing here has an effect beyond attaching packages, creating
 #' output directories and defining functions.
+#' pkgbuild and pkgload are not called anywhere in this project, so renv::status()
+#' reports them as unused. They are recorded deliberately: odin loads them to
+#' compile its models to C, and without them it falls back to interpreted R
+#' without saying so.
 
 library(here)
 
