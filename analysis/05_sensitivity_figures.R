@@ -283,4 +283,3 @@ stats <- df %>%
             .groups = "drop")
 
 write.csv(stats, data_path("tableS1_metric_quantiles.csv"), row.names = FALSE)
-print(stats)

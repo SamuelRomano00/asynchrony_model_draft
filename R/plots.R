@@ -446,7 +446,6 @@ plot_metric_by_parameter <- function(data, param, metric, bin_width, name_param,
     labs(x = name_param) +
     theme_minimal() +
     theme(axis.title.x = element_text(size = 12),
-          axis.title.x = element_text(size = 12),
           axis.text.x = element_text(size = 10),
           axis.text.y = element_text(size = 10))
 
