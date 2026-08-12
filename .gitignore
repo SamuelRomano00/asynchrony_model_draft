@@ -18,6 +18,7 @@ renv/python/
 
 # Batch-job leftovers
 data/checkpoint_metrics_computation.csv
+data/checkpoint_sobol_Y.csv
 *.out
 slurm-*.out
 

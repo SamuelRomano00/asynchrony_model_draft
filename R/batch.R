@@ -59,16 +59,26 @@ detect_ncores <- function() {
 #' @param N Population sizes per patch.
 #' @return A list with `x0`, `z0`, `r`, `metrics`, and `viable`, which is
 #'   `FALSE` when the parameter set has no endemic equilibrium.
-simulate_design_row <- function(row, n_days, start_interv, nb_studied_cycles, N) {
-
+simulate_design_row <- function(row, n_days, start_interv, nb_studied_cycles, N,
+                                skip_if_not_viable = FALSE) {
+  
   # r is derived from the sampled infectious period: the designs carry `rinv`
   # (days) rather than a rate.
   r <- 1 / row$rinv
   R0 <- c(row$R0_1, row$R0_2)
-
+  
   x0 <- compute_equilibrium_prevalence(R0, N, r, row$p_12, row$p_21)
   z0 <- x0 * r * 365 * 1000
-
+  
+  # Without an endemic equilibrium the trajectory is identically zero and the
+  # metrics carry no information, so the two ODE integrations are pure waste.
+  # metrics_computation() still wants them simulated, because that is what
+  # produces the NaN AIGR its database records, hence the flag rather than an
+  # unconditional skip.
+  if (skip_if_not_viable && (x0[1] <= 0 || x0[2] <= 0)) {
+    return(list(x0 = x0, z0 = z0, r = r, metrics = NULL, viable = FALSE))
+  }
+  
   params <- list(
     R0 = R0,
     p = c(row$p_12, row$p_21),
@@ -107,6 +117,11 @@ simulate_design_row <- function(row, n_days, start_interv, nb_studied_cycles, N)
 metrics_computation <- function(myvars, ncores = detect_ncores(), checkpoint_every = 2000,
                                 n_days = 30000, start_interv = 365,
                                 nb_studied_cycles = 6) {
+  
+  # Rows are addressed by column name with `$`, which only works on a data
+  # frame: `matrix[i, ]` returns a plain named vector. sobolSalt() hands back a
+  # matrix, so coerce rather than trust the caller.
+  myvars <- as.data.frame(myvars)
 
   n <- nrow(myvars)
   N <- c(1000, 1000)
@@ -178,19 +193,44 @@ metrics_computation <- function(myvars, ncores = detect_ncores(), checkpoint_eve
 #' identical metrics.
 AIG_AIGR_computation <- function(myvars, ncores = detect_ncores(),
                                  n_days = 35000, start_interv = 730,
-                                 nb_studied_cycles = 6) {
-
+                                 nb_studied_cycles = 6,
+                                 checkpoint_every = 10000,
+                                 checkpoint_file = data_path("checkpoint_sobol_Y.csv")) {
+  
+  # See the note in metrics_computation(): sobolSalt()$X is a matrix, whose
+  # rows do not support `$`.
+  myvars <- as.data.frame(myvars)
+  
   n <- nrow(myvars)
   N <- c(1000, 1000)
-
-  cat("AIG_AIGR_computation(): running", n, "rows on", ncores, "core(s)\n")
+  
+  # Resume from a checkpoint if one is present. The Sobol design is built from
+  # seeded inputs, so row i means the same thing across runs and completed rows
+  # can be trusted. Delete the checkpoint to force a fresh run.
+  done <- list()
+  n_done <- 0L
+  if (!is.null(checkpoint_file) && file.exists(checkpoint_file)) {
+    previous <- as.matrix(read.csv(checkpoint_file))
+    if (nrow(previous) > n) {
+      stop("AIG_AIGR_computation(): the checkpoint has more rows than the design. ",
+           "It belongs to a different run; delete it before restarting.")
+    }
+    done <- list(previous)
+    n_done <- nrow(previous)
+    message(sprintf("Resuming from %s: %d of %d rows already done.",
+                    basename(checkpoint_file), n_done, n))
+  }
+  
+  cat("AIG_AIGR_computation(): running", n - n_done, "remaining rows on",
+      ncores, "core(s)\n")
   t0 <- Sys.time()
 
   process_one_row <- function(i) {
     if (i %% 1000 == 0) {
       cat("Row", i, "/", n, "-", format(Sys.time() - t0), "\n")
     }
-    res <- simulate_design_row(myvars[i, ], n_days, start_interv, nb_studied_cycles, N)
+    res <- simulate_design_row(myvars[i, ], n_days, start_interv, nb_studied_cycles, N,
+                               skip_if_not_viable = TRUE)
     if (!res$viable) {
       return(c(AIG_year_area1 = 0, AIGR_year_area1 = 0, failed = 1))
     }
@@ -199,11 +239,40 @@ AIG_AIGR_computation <- function(myvars, ncores = detect_ncores(),
       failed = 0)
   }
 
-  results <- do.call(rbind, mclapply(seq_len(n), process_one_row,
-                                     mc.cores = ncores, mc.preschedule = FALSE))
-
+  if (n_done < n) {
+    for (chunk_start in seq(n_done + 1L, n, by = checkpoint_every)) {
+      chunk_idx <- chunk_start:min(chunk_start + checkpoint_every - 1L, n)
+      
+      raw <- mclapply(chunk_idx, process_one_row,
+                      mc.cores = ncores, mc.preschedule = FALSE)
+      
+      # mclapply() reports failures as try-error elements rather than raising
+      # them, so a silent failure would otherwise surface much later as an
+      # unrelated subscript error on the rbind result. Surface the real message.
+      failed <- vapply(raw, inherits, logical(1), "try-error")
+      if (any(failed)) {
+        stop(sprintf("AIG_AIGR_computation(): %d of %d rows in block %d-%d failed. First error: %s",
+                     sum(failed), length(chunk_idx), min(chunk_idx), max(chunk_idx),
+                     conditionMessage(attr(raw[[which(failed)[1]]], "condition"))))
+      }
+      
+      done[[length(done) + 1L]] <- do.call(rbind, raw)
+      
+      cat("Rows", min(chunk_idx), "-", max(chunk_idx), "/", n, "done -",
+          format(Sys.time() - t0), "\n")
+      
+      if (!is.null(checkpoint_file)) {
+        write.csv(do.call(rbind, done), checkpoint_file, row.names = FALSE)
+      }
+    }
+  }
+  
+  results <- do.call(rbind, done)
+  stopifnot("The assembled results do not cover the whole design." = nrow(results) == n)
+  
   cat("Rows without an endemic equilibrium:", sum(results[, "failed"]), "/", n, "\n")
 
   data.frame(AIG_year_area1 = results[, "AIG_year_area1"],
-             AIGR_year_area1 = results[, "AIGR_year_area1"])
+             AIGR_year_area1 = results[, "AIGR_year_area1"],
+             failed = results[, "failed"])
 }

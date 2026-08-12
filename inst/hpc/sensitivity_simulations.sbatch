@@ -1,7 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=asynchrony-sensitivity
-#SBATCH --cpus-per-task=32
-#SBATCH --mem=32G
+#SBATCH --partition=scicore
+#SBATCH --qos=1day
+#SBATCH --cpus-per-task=128
+#SBATCH --mem=64G
 #SBATCH --time=24:00:00
 #SBATCH --output=logs/sensitivity-%j.out
 
@@ -18,7 +20,17 @@
 
 set -euo pipefail
 
-module load R          # adjust to your cluster's module names
+module purge
+module load R/4.4.1-foss-2023b       # adjust to your cluster's module names
+
 mkdir -p logs
+
+# One BLAS thread per process: mclapply already provides the parallelism, and
+# letting each of the 128 forks spawn its own BLAS threads oversubscribes the
+# node by a factor of five and collapses throughput.
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export FLEXIBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
 
 Rscript analysis/04_sensitivity_simulations.R

@@ -45,7 +45,7 @@ build_lhs_design <- function(n, seed) {
   X <- data.frame(as.matrix(maximinLHS(n = n, k = 8)))
   colnames(X) <- c("R0_1", "R0_2", "rinv", "time_intervention",
                    "omega_1", "omega_2", "p_12", "p_21")
-
+  
   X$R0_1 <- 0.9 + X$R0_1 * (2.2 - 0.9)
   X$R0_2 <- 0.9 + X$R0_2 * (2.2 - 0.9)
   X$rinv <- floor(60 + X$rinv * (201 - 60))                      # infectious period, integer days in [60, 200]
@@ -54,7 +54,7 @@ build_lhs_design <- function(n, seed) {
   X$omega_2 <- X$omega_2 * 0.5
   X$p_12 <- X$p_12 * 0.5
   X$p_21 <- X$p_21 * 0.5
-
+  
   X
 }
 
@@ -68,8 +68,20 @@ write.csv(X2, data_path("LHS2.csv"), row.names = FALSE)
 # Simulation database
 # --------------------------------------------------------------------------
 
-df <- metrics_computation(X1)
-write.csv(df, data_path("df_simulations.csv"), row.names = FALSE)
+# Reuse an existing database rather than recomputing it. The designs are seeded,
+# so a df_simulations.csv produced by an earlier run of this script describes the
+# same 10,000 parameter sets; recomputing it would take hours to reproduce a file
+# that is already correct. Delete the file to force a fresh run.
+if (file.exists(data_path("df_simulations.csv"))) {
+  message("df_simulations.csv already exists, reusing it. ",
+          "Delete it to recompute the simulation database.")
+  df <- read.csv(data_path("df_simulations.csv"))
+  stopifnot("Existing df_simulations.csv does not match the current design size." =
+              nrow(df) == nrow(X1))
+} else {
+  df <- metrics_computation(X1)
+  write.csv(df, data_path("df_simulations.csv"), row.names = FALSE)
+}
 
 # --------------------------------------------------------------------------
 # Sobol design
@@ -77,7 +89,8 @@ write.csv(df, data_path("df_simulations.csv"), row.names = FALSE)
 # The design is built and evaluated on the FULL sample first, then restricted:
 # parameter sets with no endemic equilibrium contribute a placeholder 0 rather
 # than a simulated metric, and would bias the indices. Evaluating the full
-# design once and reusing the values avoids re-simulating the restricted one.
+# design once and reusing the values avoids re-simulating the restricted one,
+# and also supplies the viability flag the restriction is based on.
 # --------------------------------------------------------------------------
 
 set.seed(SEED_SOBOL)
@@ -89,19 +102,38 @@ colnames(sobol_design_full$X) <- myvars
 Y_full <- AIG_AIGR_computation(sobol_design_full$X)
 write.csv(Y_full, data_path("sobol_design_Y.csv"), row.names = FALSE)
 
-#' Rows of a design whose parameters admit an endemic equilibrium
-check_valid_prevalence <- function(Xdf) {
-  sapply(seq_len(nrow(Xdf)), function(j) {
-    x0 <- compute_equilibrium_prevalence(c(Xdf$R0_1[j], Xdf$R0_2[j]),
-                                         c(1000, 1000), 1 / Xdf$rinv[j],
-                                         Xdf$p_12[j], Xdf$p_21[j])
-    x0[1] > 0 && x0[2] > 0
-  })
-}
+# A draw is kept only if ALL of its 2k+2 blocks admit an endemic equilibrium,
+# not just the two source samples. Each block mixes columns from X1[j] and
+# X2[j], so both sources can be viable while the combination is not; filtering
+# on the sources alone leaves such rows in the design, contributing an AIG of
+# zero that no simulation produced. Every block at index j derives from X1[j]
+# and X2[j] alone, so rebuilding the design on the surviving indices reproduces
+# exactly the rows checked here and preserves the paired structure the Sobol
+# estimator relies on.
+#
+# Viability is read off the `failed` flag rather than recomputed: it is already
+# one Newton solve per design row, and AIG_AIGR_computation() has done them.
+n_lhs <- nrow(X1)
+n_blocks <- 2 * length(myvars) + 2
+stopifnot(
+  "Unexpected Sobol design size." = nrow(sobol_design_full$X) == n_lhs * n_blocks,
+  "Y_full carries no `failed` flag." = "failed" %in% names(Y_full)
+)
 
-valid_idx <- which(check_valid_prevalence(X1[myvars]) & check_valid_prevalence(X2[myvars]))
-cat("LHS draws excluded from the Sobol indices (no endemic equilibrium):",
-    nrow(X1) - length(valid_idx), "/", nrow(X1), "\n")
+# Blocks are stacked, so a column-major fill puts block b in column b.
+viable <- matrix(Y_full$failed == 0, nrow = n_lhs)
+valid_idx <- which(rowSums(!viable) == 0)
+
+n_rows_dropped <- nrow(sobol_design_full$X) - length(valid_idx) * n_blocks
+cat("Design rows with no endemic equilibrium:", sum(!viable), "/",
+    nrow(sobol_design_full$X),
+    sprintf("(%.2f%%)\n", 100 * mean(!viable)))
+cat("LHS draws excluded (some block has no endemic equilibrium):",
+    n_lhs - length(valid_idx), "/", n_lhs,
+    sprintf("(%.2f%%)\n", 100 * (n_lhs - length(valid_idx)) / n_lhs))
+cat("Design rows removed from the Sobol estimate:", n_rows_dropped, "/",
+    nrow(sobol_design_full$X),
+    sprintf("(%.2f%%)\n", 100 * n_rows_dropped / nrow(sobol_design_full$X)))
 
 set.seed(SEED_SOBOL)
 sobol_design <- sobolSalt(model = NULL, X1[valid_idx, myvars], X2[valid_idx, myvars],
@@ -143,11 +175,11 @@ collect_indices <- function(obj) {
   first_order <- obj$S
   first_order$X <- myvars
   first_order$index <- "first order"
-
+  
   total <- obj$T
   total$X <- myvars
   total$index <- "total"
-
+  
   out <- rbind(first_order, total)
   rownames(out) <- NULL
   out
