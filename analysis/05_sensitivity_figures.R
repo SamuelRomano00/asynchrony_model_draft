@@ -170,7 +170,7 @@ figure_AIG <- (hist_AIG + plot_sobol_indices(sobol_AIG)) /
        side = "l") +
   plot_layout(heights = c(0.4, 1))
 
-ggsave(figure_path("figure3_sensitivity_AIG.png"), figure_AIG, width = 9.5, height = 9)
+ggsave(figure_path("figure3_sensitivity_AIG.png"), figure_AIG, width = 11.4, height = 10.8)
 
 # --------------------------------------------------------------------------
 # AIGR figure
@@ -188,7 +188,7 @@ figure_AIGR <- (hist_AIGR + plot_sobol_indices(sobol_AIGR)) /
        side = "l") +
   plot_layout(heights = c(0.4, 1))
 
-ggsave(figure_path("figureS3_sensitivity_AIGR.png"), figure_AIGR, width = 9.5, height = 9)
+ggsave(figure_path("figureS3_sensitivity_AIGR.png"), figure_AIGR, width = 11.4, height = 10.8)
 
 # --------------------------------------------------------------------------
 # Near-elimination regimes
@@ -282,4 +282,15 @@ stats <- df %>%
             mean = mean(value),
             .groups = "drop")
 
-write.csv(stats, data_path("tableS1_metric_quantiles.csv"), row.names = FALSE)
+# Formatted for direct transcription into Supplementary Table S1
+ratio_rows <- grepl("^AIGR", stats$variable)
+value_cols <- setdiff(names(stats), "variable")
+
+stats_formatted <- stats
+stats_formatted[value_cols] <- lapply(value_cols, function(col) {
+  ifelse(ratio_rows,
+         paste0(sprintf("%.1f", 100 * stats[[col]]), "%"),
+         sprintf("%.1f", stats[[col]]))
+})
+
+write.csv(stats_formatted, data_path("tableS1_metric_quantiles.csv"), row.names = FALSE)

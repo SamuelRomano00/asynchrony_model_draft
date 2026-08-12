@@ -95,9 +95,7 @@ inst/hpc/             cluster submission template for 04
 
 ## Installation
 
-Requires R (>= 4.1) and a C/C++ toolchain, since `odin` and `TiPS` compile their
-models: Rtools on Windows, the Xcode command line tools on macOS, `r-base-dev`
-on Linux.
+Requires a C toolchain: Rtools on Windows, the Xcode command line tools on macOS, r-base-dev on Linux. Without it, odin falls back to generating models in R rather than C — the results are identical but the simulations are substantially slower, and the message Generating model in r at startup is the only sign.
 
 ```r
 # Preferred, once renv.lock exists:

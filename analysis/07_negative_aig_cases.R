@@ -129,11 +129,15 @@ panels <- lapply(cases, build_panel)
 panels_no_legend <- lapply(panels, function(p) p + theme(legend.position = "none"))
 shared_legend <- cowplot::get_legend(panels[[1]] + theme(legend.position = "bottom"))
 
+n_cases <- length(panels_no_legend)
+n_rows <- ceiling(n_cases / 2)
+
 grid_with_lines <- cowplot::ggdraw(
-  cowplot::plot_grid(plotlist = panels_no_legend, ncol = 2, nrow = 5)
+  cowplot::plot_grid(plotlist = panels_no_legend, ncol = 2, nrow = n_rows)
 ) +
   cowplot::draw_line(x = c(0.5, 0.5), y = c(0, 1), colour = "black", linewidth = 0.8)
-for (y_boundary in (1:4) / 5) {
+
+for (y_boundary in seq_len(n_rows - 1) / n_rows) {
   grid_with_lines <- grid_with_lines +
     cowplot::draw_line(x = c(0, 1), y = c(y_boundary, y_boundary),
                        colour = "black", linewidth = 0.8)
@@ -143,7 +147,7 @@ figure_neg <- cowplot::plot_grid(grid_with_lines, shared_legend,
                                  ncol = 1, rel_heights = c(0.94, 0.06))
 
 ggsave(figure_path("figureS11_negative_aig_cases.png"), figure_neg,
-       width = 24, height = 32, limitsize = FALSE)
+       width = 24, height = 6.4 * n_rows, limitsize = FALSE)
 
 case_dir <- figure_path("figureS11_negative_aig_cases")
 dir.create(case_dir, showWarnings = FALSE)
