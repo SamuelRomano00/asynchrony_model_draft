@@ -11,7 +11,8 @@
 #
 # Outputs:
 #   figures/figure4_decision_tree.png            top-decile tree
-#   figures/figureS7_decision_tree_thresholds.png  the same at five thresholds
+#   figures/figureS7_decision_tree_thresholds.png       the same at five thresholds
+#   figures/figureS7_decision_tree_thresholds/top_*.png one tree per threshold
 #   figures/figureS8_bootstrap_stability.png     variable and first-split stability
 #   figures/figureS9_bootstrap_tree_size.png    tree-size distribution
 #   figures/figureS10_decision_tree_AIGR.png     top-decile tree, AIGR instead
@@ -22,7 +23,7 @@ source(here::here("R", "setup.R"))
 
 # The trees depend on the RNG twice over: rpart's 10-fold cross-validation
 # assigns folds at random, and the stability analysis resamples the database.
-set.seed(12)
+set.seed(42)
 
 df <- read.csv(data_path("df_simulations.csv"))
 
@@ -62,7 +63,7 @@ print(sort(trees[["10%"]]$tree$variable.importance, decreasing = TRUE))
 # Figure 4: the top-decile tree
 # --------------------------------------------------------------------------
 
-png(figure_path("figure4_decision_tree.png"), width = 16, height = 9,
+png(figure_path("figure4_decision_tree.png"), width = 14, height = 8,
     units = "in", res = 300)
 plot_aig_tree(trees[["10%"]], "High AIG: top 10%")
 dev.off()
@@ -80,6 +81,23 @@ for (i in seq_along(trees)) {
 }
 par(mfrow = c(1, 1))
 dev.off()
+
+# Same trees again, one file each. The assembled grid is unreadable at the
+# thresholds where the tree grows large, so each panel is also written at full
+# size for inspection.
+threshold_dir <- figure_path("figureS7_decision_tree_thresholds")
+dir.create(threshold_dir, showWarnings = FALSE)
+
+for (i in seq_along(trees)) {
+  # "5%" is not usable in a filename; keep the number only.
+  label <- names(high_percentiles)[i]
+  slug <- sub("%$", "", label)
+  
+  png(file.path(threshold_dir, paste0("top_", slug, "pc.png")),
+      width = 14, height = 8, units = "in", res = 300)
+  plot_aig_tree(trees[[i]], paste0("High AIG: top ", label))
+  dev.off()
+}
 
 # --------------------------------------------------------------------------
 # Figures S8 and S9: bootstrap stability
@@ -125,7 +143,7 @@ cat("\nAIGR tree, threshold:", tree_AIGR$threshold,
     "- terminal nodes:", tree_n_leaves(tree_AIGR$tree), "\n")
 print(sort(tree_AIGR$tree$variable.importance, decreasing = TRUE))
 
-png(figure_path("figureS10_decision_tree_AIGR.png"), width = 16, height = 9,
+png(figure_path("figureS10_decision_tree_AIGR.png"), width = 14, height = 8,
     units = "in", res = 300)
 plot_aig_tree(tree_AIGR, "High AIGR: top 10%")
 dev.off()
