@@ -14,7 +14,9 @@
 #' @param n_days Total number of days simulated.
 #' @param start_interv Day the first intervention period began.
 #' @param length_intervention Years per on/off period.
-#' @param nb_studied_cycles Number of on/off cycles defining the study window.
+#' @param nb_studied_cycles Number of full intervention cycles defining the
+#'   study window. One cycle is one "on" phase followed by one "off" phase, so
+#'   `2 * length_intervention` years.
 #' @return A named numeric vector with, per area and overall: the summed cases
 #'   under each scenario (`As*`, `S*`), `AIGR*` (relative excess), `AIG*`
 #'   (absolute excess, rounded), and the `*_year` variants of both.
@@ -27,7 +29,7 @@ compute_metrics <- function(incidence_async, incidence_sync, n_days,
   B <- floor(n_days / 365) + 1
   start_area1 <- floor(start_interv / 365) + 2   # first year actually under intervention
   start_area2 <- B + start_area1
-  studied_duration_intervention <- ceiling(length_intervention * nb_studied_cycles)
+  studied_duration_intervention <- ceiling(2 * length_intervention * nb_studied_cycles)
   end_area1 <- start_area1 + studied_duration_intervention - 1
   end_area2 <- start_area2 + studied_duration_intervention - 1
 

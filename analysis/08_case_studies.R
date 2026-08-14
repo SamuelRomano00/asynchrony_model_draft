@@ -27,7 +27,7 @@ n_reps <- 1000
 simulator <- build_SIS_stochastic_simulator()
 
 N <- c(1000, 1000)
-nb_studied_cycles <- 6
+nb_studied_cycles <- 3
 
 # Case-study parameters live in R/case_studies.R, because 09_floquet_exponents.R
 # reads the same definitions.

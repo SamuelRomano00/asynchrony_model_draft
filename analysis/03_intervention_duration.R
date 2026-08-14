@@ -26,7 +26,7 @@ p_21 <- 0.01
 
 start_year <- 1
 start_interv <- start_year * 365
-nb_studied_cycles <- 6
+nb_studied_cycles <- 3
 
 omega <- c(0.5, 0.5)
 R0 <- c(1.1, 1.1)

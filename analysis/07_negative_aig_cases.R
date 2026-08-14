@@ -41,7 +41,7 @@ simulate_one_case <- function(row) {
   n_days <- 30000
   N <- c(1000, 1000)
   start_interv <- 365
-  nb_studied_cycles <- 6
+  nb_studied_cycles <- 3
   length_intervention <- row$time_intervention
   
   params_row <- list(

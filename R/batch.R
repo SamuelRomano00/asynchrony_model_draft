@@ -122,7 +122,7 @@ simulate_design_row <- function(row, n_days, start_interv, nb_studied_cycles, N,
 #' analysis script goes through it.
 metrics_computation <- function(myvars, ncores = detect_ncores(), checkpoint_every = 2000,
                                 n_days = 30000, start_interv = 365,
-                                nb_studied_cycles = 6) {
+                                nb_studied_cycles = 3) {
   
   # Rows are addressed by column name with `$`, which only works on a data
   # frame: `matrix[i, ]` returns a plain named vector. sobolSalt() hands back a
@@ -205,7 +205,7 @@ metrics_computation <- function(myvars, ncores = detect_ncores(), checkpoint_eve
 #' identical metrics.
 AIG_AIGR_computation <- function(myvars, ncores = detect_ncores(),
                                  n_days = 35000, start_interv = 730,
-                                 nb_studied_cycles = 6,
+                                 nb_studied_cycles = 3,
                                  checkpoint_every = 10000,
                                  checkpoint_file = data_path("checkpoint_sobol_Y.csv")) {
   
