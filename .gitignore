@@ -16,12 +16,29 @@ renv/local/
 renv/staging/
 renv/python/
 
+# ---------------------------------------------------------------------------
+# Analysis outputs
+#
+# Everything the scripts in analysis/ write is ignored: it is all regenerable
+# from the code and the seeds, and committing it would put megabytes of PNGs
+# and a 180,000-row CSV through every diff.
+# ---------------------------------------------------------------------------
+
+data/*
+!data/.gitkeep
+!data/df_simulations.csv
+!data/sobol_AIG.csv
+!data/sobol_AIGR.csv
+!data/sobol_AIGR_rank.csv
+!data/sobol_AIG_S2.csv
+!data/sobol_AIGR_S2.csv
+!data/sobol_AIGR_rank_S2.csv
+
+figures/*
+!figures/.gitkeep
+
 # Batch-job leftovers
-data/checkpoint_metrics_computation.csv
-data/checkpoint_sobol_Y.csv
-data/LHS1.csv
-data/LHS2.csv
-data/sobol_design_Y.csv
+logs/
 *.out
 slurm-*.out
 
