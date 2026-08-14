@@ -1,17 +1,7 @@
 # Assessing the impact of absence of coordination in malaria intervention strategies
 
-Code and analysis scripts for *Assessing the impact of absence of coordination
-in malaria intervention strategies: a modelling study*.
-
-<!-- TODO: authors, journal, DOI, preprint link, and a CITATION.cff once the
-     repository has a permanent home. -->
-
-Malaria control is increasingly tailored at subnational scales, but neighbouring
-areas stay connected by human mobility. When two connected areas run the same
-intervention on different schedules, each re-seeds the other during its own
-"off" period. This repository quantifies that penalty with the **Asynchrony
-Induced Growth (AIG)**: the excess cases caused by asynchronous timing, relative
-to deploying exactly the same intervention in phase.
+Code and analysis scripts for __Assessing the impact of absence of coordination in malaria intervention strategies: a modelling study__  
+Younes Iggidr, Nick Ruktanonchai, Bilal Benhana, Valérian Turbé, Billy Bauzile, Abigail Ward, Justin Cohen, Emilie Pothin, Clara Champagne.
 
 The core model is a two-patch SIS metapopulation with Lagrangian mobility,
 derived from Ruktanonchai et al. (2016). Interventions multiply the transmission
@@ -171,9 +161,7 @@ while `AIGR = 0/0` is undefined. Two things follow.
   the surviving indices so the paired structure the estimator relies on is
   preserved.
 - `05`, `06` and `07` read the database through `load_simulation_database()`,
-  which drops the non-viable rows. Reading `df_simulations.csv` directly would
-  put the AIG analyses and the AIGR analyses on different samples, since the
-  latter drop those rows through their own `is.finite()` guards.
+  which drops the non-viable rows.
 
 The Latin hypercube designs use fixed seeds (`SEED_LHS1`, `SEED_LHS2` at the top
 of the script), so the designs and the database are reproducible. Changing them
@@ -196,68 +184,6 @@ sobol_AIGR_rank_S2.csv    the same on ranks
 `LHS1.csv`, `LHS2.csv` and `sobol_design_Y.csv` are not committed: the first two
 are regenerated deterministically from their seeds, and the third is the
 180,000-row evaluation of the full Sobol design, needed only inside `04`.
-
-## Notes for readers of the code
-
-- **Two different setups inside the sensitivity analysis.** The simulation
-  database starts interventions on day 365 over a 30,000-day horizon; the Sobol
-  design uses day 730 over 35,000 days. The difference is cosmetic and returns
-  identical metrics, because the model sits at the endemic equilibrium until the
-  intervention starts and `compute_metrics()` locates its window from those same
-  two arguments. Both functions take them as arguments if you want to align
-  them anyway.
-- **AIGR near elimination.** When a synchronous run has already eliminated
-  transmission inside the metric window, the AIGR denominator is zero and the
-  ratio is undefined, while the AIG stays well defined. The stochastic summaries
-  count and exclude those replicates rather than letting them blank out a whole
-  row. `04` additionally writes rank-based AIGR indices
-  (`sobol_AIGR_rank.csv`), insensitive to that tail; `05` plots the raw-scale
-  ones and can be pointed at the rank version in one line.
-- **Metric window indexing.** `compute_metrics()` locates each area's block of
-  years by integer position, not by label. Both the deterministic and the
-  stochastic runners therefore emit the same yearly layout: one entry per
-  complete year, preceded by a `t = 0` placeholder.
-- **Case management is not modelled.** The `alpha` term present in earlier
-  versions of the code has been removed: it was fixed at 0 in every analysis in
-  the paper.
-- **The Floquet window starts on a cycle boundary.** Multipliers are the same
-  wherever the window sits inside the periodic regime, but it has to sit inside
-  it, and the schedule only becomes periodic once the interventions begin: the
-  simulations open with a pre-intervention year so the endemic equilibrium is
-  visible on the figures. `09` drops those days before integrating, and
-  `check_schedule_periodicity()` refuses any window that is not a period.
-- **Randomness in the trees.** `06` depends on the RNG twice: `rpart`'s 10-fold
-  cross-validation assigns folds at random, and the stability analysis resamples
-  the database 500 times. One `set.seed(42)` at the top of the script covers
-  both.
-- **Parallelism.** The batch loops fork with `mclapply()`, so workers inherit
-  the already-compiled odin model. On Windows they fall back to a single core.
-  On a cluster, pin the BLAS to one thread per process: without it, each fork
-  spawns its own BLAS threads and throughput collapses. The sbatch template
-  does this.
-
-## References
-
-- Ruktanonchai N.W. et al. (2016) Identifying malaria transmission foci for
-  elimination using human mobility data. *PLOS Computational Biology* 12(4),
-  e1004846.
-- Cosner C. et al. (2009) The effects of human movement on the persistence of
-  vector-borne diseases. *Journal of Theoretical Biology* 258(4), 550-560.
-- Zhao X.-Q. & Jing Z.-J. (1996) Global asymptotic behavior in some cooperative
-  systems of functional differential equations. *Canadian Applied Mathematics
-  Quarterly* 4(4).
-- Wang W. & Zhao X.-Q. (2008) Threshold dynamics for compartmental epidemic
-  models in periodic environments. *Journal of Dynamics and Differential
-  Equations* 20(3), 699-717.
-- Saltelli A. (2002) Making best use of model evaluations to compute sensitivity
-  indices. *Computer Physics Communications* 145(2), 280-297.
-- Breiman L. et al. (1984) *Classification and Regression Trees*. Chapman and
-  Hall/CRC.
-- FitzJohn R. et al. (2025) odin: ODE generation and integration. R package.
-- Danesh G. et al. (2023) TiPS: rapidly simulating trajectories and phylogenies
-  from compartmental models. *Methods in Ecology and Evolution* 14(2), 487-495.
-- Iooss B. et al. (2026) sensitivity: global sensitivity analysis of model
-  outputs and importance measures. R package.
 
 ## Licence
 

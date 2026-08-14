@@ -85,5 +85,5 @@ visualize_interruption_stochastic(all_incidence, year_start_plot = 0,
 ggsave(figure_path("figureS1_interruption.png"),
        width = 9, height = 5, units = "in", dpi = 600)
 
-write.csv(build_publication_table(metrics$summary, all_incidence),
+write.csv(build_publication_table(metrics$summary, all_incidence, start_interv),
           data_path("table2_illustrative_example.csv"), row.names = FALSE)

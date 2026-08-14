@@ -37,13 +37,21 @@ interruption_year_95 <- function(curve_df, area_name, scenario_name) {
 #' @param areas Areas to sum over: one of them, or both for a combined total.
 #' @param scenario_name Which schedule to sum.
 #' @param year Cut-off, in years, inclusive. `NA` returns `NULL`.
+#' @param start_interv Day the first intervention period begins.
 #' @return One total per replicate, or `NULL` when `year` is `NA`.
 #'
-#' The `t = 0` row of `annual_incidence` is a placeholder carrying year 1's
-#' value again, so that each patch's block has one entry per year boundary and
-#' `compute_metrics()` can index it by position. It is dropped here: summing it
-#' would count the first year twice.
-cumulated_incidence_to_year <- function(incidence, areas, scenario_name, year) {
+#' The sum starts at the first year actually under intervention, exactly where
+#' `compute_metrics()` starts its own window, so that this column and the AIG
+#' describe the same period. Two things are excluded by the single `t >
+#' start_interv` condition. The pre-intervention year, held at the endemic
+#' equilibrium so that the starting level is visible on the figures, carries a
+#' full year of untreated transmission and would dominate the total: in the
+#' illustrative example it is on its own larger than everything accrued
+#' afterwards. And the `t = 0` row, a placeholder carrying year 1's value again
+#' so that each patch's block has one entry per year boundary for
+#' `compute_metrics()` to index by position, would count that year twice.
+cumulated_incidence_to_year <- function(incidence, areas, scenario_name, year,
+                                        start_interv) {
   
   if (is.na(year)) {
     return(NULL)
@@ -52,7 +60,7 @@ cumulated_incidence_to_year <- function(incidence, areas, scenario_name, year) {
   incidence %>%
     filter(area %in% areas,
            scenario == scenario_name,
-           t > 0,
+           t > start_interv,
            t / 365 <= year) %>%
     group_by(rep) %>%
     summarise(total = sum(value), .groups = "drop") %>%
@@ -72,20 +80,24 @@ cumulated_incidence_to_year <- function(incidence, areas, scenario_name, year) {
 #' @param summary The `summary` element of [compute_metrics_stochastic()].
 #' @param incidence Long-format annual incidence with columns `t`, `value`,
 #'   `rep`, `area` and `scenario`.
+#' @param start_interv Day the first intervention period begins, the same value
+#'   the simulation was run with. Everything before it is pre-intervention time
+#'   at the endemic equilibrium and is excluded from the totals.
 #' @return A tibble with one block of two rows per area plus a combined block.
 #'
-#' The two halves of the table are measured over DIFFERENT windows, and the
-#' caption has to say so. AIG and AIGR are computed over the fixed metric window
-#' of three intervention cycles, because that is what makes them comparable
-#' across scenarios. The cumulated incidence is summed up to the year the
-#' scenario actually reaches interruption, which is what "before transmission
-#' interruption" means and which differs from one schedule to the next.
+#' The two halves of the table start at the same point, the first year under
+#' intervention, but END differently, and the caption has to say so. AIG and
+#' AIGR run to the close of the fixed metric window of three intervention
+#' cycles, because that is what makes them comparable across scenarios. The
+#' cumulated incidence runs to the year the scenario actually reaches
+#' interruption, which is what "before transmission interruption" means and
+#' which differs from one schedule to the next.
 #'
 #' Where a scenario never reaches the 95% threshold, there is no such year, and
 #' the cumulated-incidence cell is left empty rather than falling back on the
 #' metric window: a total labelled "before transmission interruption" for a
 #' scenario that never interrupts would be meaningless.
-build_publication_table <- function(summary, incidence) {
+build_publication_table <- function(summary, incidence, start_interv) {
   
   curve_df <- compute_interruption_curve(incidence)
   
@@ -133,7 +145,8 @@ build_publication_table <- function(summary, incidence) {
   #' Replicates that interrupted earlier contribute nothing after their own
   #' last case, so they need no special handling.
   cumulated_cell <- function(areas, scenario_name, year) {
-    totals <- cumulated_incidence_to_year(incidence, areas, scenario_name, year)
+    totals <- cumulated_incidence_to_year(incidence, areas, scenario_name, year,
+                                          start_interv)
     if (is.null(totals) || length(totals) == 0) {
       return("")
     }

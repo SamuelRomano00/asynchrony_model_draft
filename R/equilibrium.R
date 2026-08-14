@@ -154,15 +154,15 @@ compute_R0 <- function(x0, N, r, p_12, p_21) {
 
   # Prevalence met in each patch, same mixing of residents and visitors as in
   # the model, treated as known here since x0 is the target.
-  K_1 <- (a * N_1 * X_1 + c * N_2 * X_2) / (a * N_1 + c * N_2)
-  K_2 <- (b * N_1 * X_1 + d * N_2 * X_2) / (b * N_1 + d * N_2)
+  K_1 <- (m11 * N_1 * X_1 + m21 * N_2 * X_2) / (m11 * N_1 + m21 * N_2)
+  K_2 <- (m12 * N_1 * X_1 + m22 * N_2 * X_2) / (m12 * N_1 + m22 * N_2)
 
   # Linear in the unknowns (R0_1, R0_2), obtained by rearranging the SIS
   # equilibrium condition into odds form, X / (1 - X), for each patch. No
   # analytic Jacobian is needed for a linear system.
   eqs <- function(vars) {
-    c(a * K_1 * vars[1] + b * K_2 * vars[2] - X_1 / (1 - X_1),
-      c * K_1 * vars[1] + d * K_2 * vars[2] - X_2 / (1 - X_2))
+    c(m11 * K_1 * vars[1] + m12 * K_2 * vars[2] - X_1 / (1 - X_1),
+      m21 * K_1 * vars[1] + m22 * K_2 * vars[2] - X_2 / (1 - X_2))
   }
 
   sol <- nleqslv(c(1, 1), eqs)
