@@ -118,7 +118,8 @@ plot_sobol_indices <- function(sobol_df) {
           axis.title.x = element_text(size = 10),
           legend.text = element_text(size = 10),
           legend.title = element_blank(),
-          legend.position = c(0.83, 1),
+          legend.position = "inside",
+          legend.position.inside = c(0.83, 1),
           legend.background = element_rect(colour = 1),
           legend.box = "horizontal",
           strip.background = element_rect(fill = "white", color = "white"))

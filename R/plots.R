@@ -83,7 +83,7 @@ make_intervention_segments <- function(xmin, xmax, y, length, space, colours) {
 plot_incidence_panel <- function(incidence_i, metrics_labels_i, length_intervention_i,
                                  year_start_plot, year_end_plot, max_y, gap,
                                  show_aig_area = TRUE, text_scale = 1,
-                                 label_y = NULL, title_i = NULL) {
+                                 label_y = NULL, title_i = NULL, start_year = 1) {
 
   # A scalar applies to both areas; a named vector is indexed by area. Areas
   # plotted on free scales need their own heights, otherwise the schedule
@@ -97,17 +97,17 @@ plot_incidence_panel <- function(incidence_i, metrics_labels_i, length_intervent
   # Area 1's asynchronous schedule is never phase-shifted; area 2's is shifted
   # by exactly one period, which is what "asynchronous" means here.
   segments_all <- bind_rows(
-    make_intervention_segments(1, year_end_plot + 1, max_y1,
+    make_intervention_segments(start_year, year_end_plot + 1, max_y1,
                                length_intervention_i, length_intervention_i,
                                "Asynchronous") %>% mutate(area = "Area1"),
-    make_intervention_segments(1, year_end_plot + 1, max_y1 + gap1,
+    make_intervention_segments(start_year, year_end_plot + 1, max_y1 + gap1,
                                length_intervention_i, length_intervention_i,
                                "Synchronous") %>% mutate(area = "Area1"),
-    make_intervention_segments(1 + length_intervention_i,
+    make_intervention_segments(start_year + length_intervention_i,
                                length_intervention_i + year_end_plot + 1, max_y2,
                                length_intervention_i, length_intervention_i,
                                "Asynchronous") %>% mutate(area = "Area2"),
-    make_intervention_segments(1, year_end_plot + 1, max_y2 + gap2,
+    make_intervention_segments(start_year, year_end_plot + 1, max_y2 + gap2,
                                length_intervention_i, length_intervention_i,
                                "Synchronous") %>% mutate(area = "Area2")
   )
@@ -198,7 +198,8 @@ visualize_incidence <- function(incidence, length_intervention,
                                 year_start_plot, year_end_plot, max_y, gap,
                                 metrics_labels, facet_rows = NULL,
                                 show_aig_area = TRUE, AIG = FALSE,
-                                panel_heights = NULL, panel_titles = TRUE) {
+                                panel_heights = NULL, panel_titles = TRUE, 
+                                start_year = 1) {
 
   metrics_labels <- metrics_labels %>%
     mutate(value = if (AIG) {
@@ -213,6 +214,7 @@ visualize_incidence <- function(incidence, length_intervention,
                                 year_start_plot = year_start_plot,
                                 year_end_plot = year_end_plot,
                                 max_y = max_y, gap = gap,
+                                start_year = 1,
                                 show_aig_area = show_aig_area))
   }
 
@@ -238,6 +240,7 @@ visualize_incidence <- function(incidence, length_intervention,
                          year_start_plot = year_start_plot,
                          year_end_plot = year_end_plot,
                          max_y = max_y, gap = gap,
+                         start_year = 1,
                          show_aig_area = show_aig_area,
                          title_i = if (panel_titles) as.character(lv) else NULL)
   }, levels_i, length_intervention)
@@ -264,7 +267,7 @@ visualize_incidence <- function(incidence, length_intervention,
 visualize_incidence_stochastic <- function(incidence, length_intervention,
                                            year_start_plot, year_end_plot, gap,
                                            metrics_labels, show_aig_area = FALSE,
-                                           AIG = FALSE) {
+                                           AIG = FALSE, start_year = 1) {
 
   metrics_labels <- metrics_labels %>%
     mutate(value = if (AIG) {
@@ -276,17 +279,17 @@ visualize_incidence_stochastic <- function(incidence, length_intervention,
   max_y <- max(incidence$value)
 
   segments_all <- bind_rows(
-    make_intervention_segments(1, year_end_plot + 1, max_y,
+    make_intervention_segments(start_year, year_end_plot + 1, max_y,
                                length_intervention, length_intervention,
                                "Asynchronous") %>% mutate(area = "Area1"),
-    make_intervention_segments(1, year_end_plot + 1, max_y + gap,
+    make_intervention_segments(start_year, year_end_plot + 1, max_y + gap,
                                length_intervention, length_intervention,
                                "Synchronous") %>% mutate(area = "Area1"),
-    make_intervention_segments(1 + length_intervention,
+    make_intervention_segments(start_year + length_intervention,
                                length_intervention + year_end_plot + 1, max_y,
                                length_intervention, length_intervention,
                                "Asynchronous") %>% mutate(area = "Area2"),
-    make_intervention_segments(1, year_end_plot + 1, max_y + gap,
+    make_intervention_segments(start_year, year_end_plot + 1, max_y + gap,
                                length_intervention, length_intervention,
                                "Synchronous") %>% mutate(area = "Area2")
   )
@@ -429,7 +432,8 @@ plot_metric_by_parameter <- function(data, param, metric, bin_width, name_param,
     mutate(param_val = .data[[param]], metric_val = .data[[metric]]) %>%
     mutate(param_bin = cut(param_val,
                            breaks = seq(floor(min(param_val)),
-                                        ceiling(max(param_val)), by = bin_width))) %>%
+                                        ceiling(max(param_val)), by = bin_width),
+                           include.lowest = TRUE)) %>%
     group_by(param_bin) %>%
     summarise(param_mid = mean(param_val),
               I_median = median(metric_val, na.rm = TRUE),

@@ -25,10 +25,12 @@ compute_equilibrium_prevalence <- function(R0, N, r, p_12, p_21) {
 
   N_1 <- N[1]
   N_2 <- N[2]
-  a <- 1 - p_12   # patch-1 residents staying in patch 1
-  b <- p_12       # patch-1 residents visiting patch 2
-  c <- p_21       # patch-2 residents visiting patch 1
-  d <- 1 - p_21   # patch-2 residents staying in patch 2
+  # Mobility matrix entries, named m11..m22 rather than a..d: `c` and `F` would
+  # shadow the concatenation function and FALSE inside this function.
+  m11 <- 1 - p_12   # patch-1 residents staying in patch 1
+  m12 <- p_12       # patch-1 residents visiting patch 2
+  m21 <- p_21       # patch-2 residents visiting patch 1
+  m22 <- 1 - p_21   # patch-2 residents staying in patch 2
 
   R0_1 <- R0[1]
   R0_2 <- R0[2]
@@ -40,31 +42,31 @@ compute_equilibrium_prevalence <- function(R0, N, r, p_12, p_21) {
   # visitors: patch 1 sees a*N_1 + c*N_2, patch 2 sees b*N_1 + d*N_2.
   # k1_x and k2_x are built from patch-1 residents and so carry the x terms;
   # k1_y and k2_y are built from patch-2 residents and carry the y terms.
-  k1_x <- r * R0_1 * a * N_1 / (a * N_1 + c * N_2)
-  k1_y <- r * R0_1 * c * N_2 / (a * N_1 + c * N_2)
-  k2_x <- r * R0_2 * b * N_1 / (b * N_1 + d * N_2)
-  k2_y <- r * R0_2 * d * N_2 / (b * N_1 + d * N_2)
-
+  k1_x <- r * R0_1 * m11 * N_1 / (m11 * N_1 + m21 * N_2)
+  k1_y <- r * R0_1 * m21 * N_2 / (m11 * N_1 + m21 * N_2)
+  k2_x <- r * R0_2 * m12 * N_1 / (m12 * N_1 + m22 * N_2)
+  k2_y <- r * R0_2 * m22 * N_2 / (m12 * N_1 + m22 * N_2)
+  
   # Quadratic coefficients of the two equilibrium equations.
-  A <- (a * k1_x + b * k2_x - r)
-  B <- (a * k1_x + b * k2_x)   # eq1: coefficient of x
-  C <- (a * k1_y + b * k2_y)   # eq1: coefficient of y
-  F <- (c * k1_y + d * k2_y)   # eq2: coefficient of y
-  G <- (c * k1_x + d * k2_x)   # eq2: coefficient of x
-  E <- F - r
+  A <- (m11 * k1_x + m12 * k2_x - r)
+  B <- (m11 * k1_x + m12 * k2_x)   # eq1: coefficient of x
+  C <- (m11 * k1_y + m12 * k2_y)   # eq1: coefficient of y
+  Fyy <- (m21 * k1_y + m22 * k2_y) # eq2: coefficient of y
+  G <- (m21 * k1_x + m22 * k2_x)   # eq2: coefficient of x
+  E <- Fyy - r
 
-  system <- function(vars) {
+  eqs <- function(vars) {
     x <- vars[1]
     y <- vars[2]
     c(A * x - B * x^2 - C * x * y + C * y,
-      E * y - F * y^2 - G * x * y + G * x)
+      E * y - Fyy * y^2 - G * x * y + G * x)
   }
 
   jacobian <- function(vars) {
     x <- vars[1]
     y <- vars[2]
     matrix(c(A - 2 * B * x - C * y, -C * x + C,
-             -G * y + G,            E - 2 * F * y - G * x),
+             -G * y + G,            E - 2 * Fyy * y - G * x),
            nrow = 2, byrow = TRUE)
   }
 
@@ -76,7 +78,7 @@ compute_equilibrium_prevalence <- function(R0, N, r, p_12, p_21) {
   #    system-level R0 is the spectral radius of [[B, C], [G, F]] / r. When it
   #    is at most 1 the disease-free state is the only equilibrium and zeros
   #    are the correct answer, not a solver failure.
-  M <- matrix(c(B, C, G, F), nrow = 2, byrow = TRUE)
+  M <- matrix(c(B, C, G, Fyy), nrow = 2, byrow = TRUE)
   R0_system <- max(Mod(eigen(M, only.values = TRUE)$values)) / r
   if (R0_system <= 1) {
     return(c(0, 0))
@@ -85,7 +87,7 @@ compute_equilibrium_prevalence <- function(R0, N, r, p_12, p_21) {
   # 2. Solve in logit space. Substituting x = plogis(u) puts the trivial root
   #    at u = -Inf, out of reach of any finite Newton step, and enforces the
   #    (0, 1) box constraint automatically.
-  system_logit <- function(u) system(plogis(u))
+  eqs_logit <- function(u) eqs(plogis(u))
   jacobian_logit <- function(u) {
     x <- plogis(u)
     jacobian(x) %*% diag(x * (1 - x))   # chain rule: d(plogis)/du = x*(1-x)
@@ -98,14 +100,14 @@ compute_equilibrium_prevalence <- function(R0, N, r, p_12, p_21) {
   starts <- list(start_isolated, c(0.5, 0.5), c(0.1, 0.1), c(0.9, 0.9), c(0.01, 0.5))
 
   for (s in starts) {
-    sol <- try(nleqslv(qlogis(s), system_logit, jac = jacobian_logit,
+    sol <- try(nleqslv(qlogis(s), eqs_logit, jac = jacobian_logit,
                        method = "Newton",
                        control = list(ftol = 1e-20, xtol = 1e-20, maxit = 200)),
                silent = TRUE)
     if (inherits(sol, "try-error")) next
 
     x_sol <- plogis(sol$x)
-    if (max(abs(system(x_sol))) < 1e-10 && max(x_sol) > 1e-8 && max(x_sol) < 1 - 1e-9) {
+    if (max(abs(eqs(x_sol))) < 1e-10 && max(x_sol) > 1e-8 && max(x_sol) < 1 - 1e-9) {
       return(x_sol)
     }
   }
@@ -119,11 +121,11 @@ compute_equilibrium_prevalence <- function(R0, N, r, p_12, p_21) {
   x_int <- c(0.5, 0.5)
   dt <- 0.1 / r
   for (k in 1:200000) {
-    k1 <- system(x_int)
+    k1 <- eqs(x_int)
     if (max(abs(k1)) < 1e-14) break
-    k2 <- system(x_int + dt / 2 * k1)
-    k3 <- system(x_int + dt / 2 * k2)
-    k4 <- system(x_int + dt * k3)
+    k2 <- eqs(x_int + dt / 2 * k1)
+    k3 <- eqs(x_int + dt / 2 * k2)
+    k4 <- eqs(x_int + dt * k3)
     x_int <- pmin(pmax(x_int + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4), 0), 1)
   }
   x_int
@@ -143,10 +145,10 @@ compute_R0 <- function(x0, N, r, p_12, p_21) {
 
   N_1 <- N[1]
   N_2 <- N[2]
-  a <- 1 - p_12
-  b <- p_12
-  c <- p_21
-  d <- 1 - p_21
+  m11 <- 1 - p_12   # patch-1 residents staying in patch 1
+  m12 <- p_12       # patch-1 residents visiting patch 2
+  m21 <- p_21       # patch-2 residents visiting patch 1
+  m22 <- 1 - p_21   # patch-2 residents staying in patch 2
   X_1 <- x0[1]
   X_2 <- x0[2]
 
@@ -158,12 +160,12 @@ compute_R0 <- function(x0, N, r, p_12, p_21) {
   # Linear in the unknowns (R0_1, R0_2), obtained by rearranging the SIS
   # equilibrium condition into odds form, X / (1 - X), for each patch. No
   # analytic Jacobian is needed for a linear system.
-  system <- function(vars) {
+  eqs <- function(vars) {
     c(a * K_1 * vars[1] + b * K_2 * vars[2] - X_1 / (1 - X_1),
       c * K_1 * vars[1] + d * K_2 * vars[2] - X_2 / (1 - X_2))
   }
 
-  sol <- nleqslv(c(1, 1), system)
+  sol <- nleqslv(c(1, 1), eqs)
   c(sol$x[1], sol$x[2])
 }
 

@@ -36,8 +36,8 @@ options(ggpattern_use_R4.1_features = FALSE)
 # Output locations
 #
 # All paths are resolved from the project root by `here`, so scripts run
-# identically from RStudio, from `Rscript analysis/01_toy_example.R`, and from
-# a cluster job, with no working-directory assumptions.
+# identically from RStudio, from `Rscript analysis/01_illustrative_example.R`,
+# and from a cluster job, with no working-directory assumptions.
 # ---------------------------------------------------------------------------
 
 dir_data <- here::here("data")

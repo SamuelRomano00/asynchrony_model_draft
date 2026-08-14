@@ -11,11 +11,11 @@
 #' `R0` is recovered) or an explicit `R0`. Values are those of the Figure 5
 #' caption, on the paper's \[0, 0.5\] scale.
 CASE_STUDIES <- list(
-  A = list(p_12 = 0.2, p_21 = 0.2, start_year = 2, length_intervention = 1.5,
+  A = list(p_12 = 0.2, p_21 = 0.2, start_year = 1, length_intervention = 1.5,
            omega = c(0.4, 0.4), r = 1 / 200, x0 = c(0.3, 0.3), R0 = NULL),
-  B = list(p_12 = 0.1, p_21 = 0.01, start_year = 2, length_intervention = 3,
+  B = list(p_12 = 0.1, p_21 = 0.01, start_year = 1, length_intervention = 3,
            omega = c(0.5, 0.3), r = 1 / 150, x0 = c(0.2, 0.2), R0 = NULL),
-  C = list(p_12 = 0.1, p_21 = 0.01, start_year = 2, length_intervention = 1.5,
+  C = list(p_12 = 0.1, p_21 = 0.01, start_year = 1, length_intervention = 1.5,
            omega = c(0.45, 0.45), r = 1 / 60, x0 = c(0.2, 0.2), R0 = NULL),
   # p_12 and p_21 are the rounded 0.011 and 0.032 of the Figure 5 caption; the
   # exact values simulated are these complements of 0.9/0.91 and 0.9/0.93.

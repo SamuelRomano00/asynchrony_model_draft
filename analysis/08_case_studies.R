@@ -77,7 +77,7 @@ run_case <- function(case, label) {
     plot_incidence = visualize_incidence_stochastic(
       incidence, case$length_intervention,
       year_start_plot = 0, year_end_plot = 25, gap = 20,
-      metrics_labels = metrics_labels, AIG = TRUE
+      metrics_labels = metrics_labels, start_year = case$start_year, AIG = TRUE
     ),
     plot_interruption = visualize_interruption_stochastic(
       incidence, year_start_plot = 0, year_end_plot = 25, smooth = TRUE

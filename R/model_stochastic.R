@@ -90,14 +90,16 @@ run_SIS_stochastic <- function(simulator, parameters, times, n_reps = 1,
                                verbose = FALSE) {
 
   N1 <- unname(parameters$N[1]); N2 <- unname(parameters$N[2])
-  a <- parameters$p[1, 1]; b <- parameters$p[1, 2]
-  c <- parameters$p[2, 1]; d <- parameters$p[2, 2]
+  # Local names avoid shadowing `c`; the TiPS parameter names below must stay
+  # a/b/c/d because they appear verbatim in the reaction expressions.
+  m11 <- parameters$p[1, 1]; m12 <- parameters$p[1, 2]
+  m21 <- parameters$p[2, 1]; m22 <- parameters$p[2, 2]
 
   paramValues <- list(
     r = unname(parameters$r),
     R01 = unname(parameters$R0[1]), R02 = unname(parameters$R0[2]),
     om1 = unname(parameters$omega$omega1), om2 = unname(parameters$omega$omega2),
-    a = a, b = b, c = c, d = d,
+    a = m11, b = m12, c = m21, d = m22,
     N1 = N1, N2 = N2
   )
 

@@ -32,7 +32,9 @@ convention and metrics:
 
 ## Metrics
 
-Over a study window of 3 intervention cycles, i.e. `6 * t_I` years:
+A **cycle** is one "on" phase followed by one "off" phase, i.e. `2 * t_I` years.
+The study window is 3 cycles, i.e. `6 * t_I` years, starting with the first year
+under intervention:
 
 | Metric | Definition |
 |---|---|
@@ -80,7 +82,8 @@ R/                    functions, no side effects, never run directly
   equilibrium.R       endemic equilibria and calibration
   simulate.R          synchronous vs asynchronous runs of each model
   metrics.R           AIG and AIGR, interruption curves
-  batch.R             parallel batch loops over parameter designs
+  batch.R             parallel batch loops over parameter designs, and the
+                      loader every analysis script reads the database through
   plots.R             figures
   decision_tree.R     CART fitting, bootstrap stability, and their figures
   floquet.R           asymptotic stability under periodic schedules
@@ -88,76 +91,111 @@ R/                    functions, no side effects, never run directly
   tables.R            publication tables
 
 analysis/             one script per figure or table, run in order
-data/         everything the scripts write
+data/                 everything the scripts write; the derived CSVs needed by
+                      05, 06 and 07 are committed
 figures/              all figures
 inst/hpc/             cluster submission template for 04
 ```
 
 ## Installation
 
-Requires a C toolchain: Rtools on Windows, the Xcode command line tools on macOS, r-base-dev on Linux. Without it, odin falls back to generating models in R rather than C — the results are identical but the simulations are substantially slower, and the message Generating model in r at startup is the only sign.
+Requires a C toolchain: Rtools on Windows, the Xcode command line tools on
+macOS, `r-base-dev` on Linux. Without it, odin falls back to generating models
+in R rather than C. The results are identical but the simulations are
+substantially slower, and the message `Generating model in r` at startup is the
+only sign.
 
 ```r
-# Preferred, once renv.lock exists:
 renv::restore()
+```
 
-# Or, to bootstrap a fresh environment:
+`renv.lock` pins R 4.4.1 and 107 packages, the versions the published results
+were produced with. To bootstrap an environment without renv:
+
+```r
 source("install_dependencies.R")
 ```
 
-<!-- TODO: create the lockfile on your machine, then commit it:
-     renv::init(); renv::snapshot()
-     A hand-written lockfile would not reflect the versions the results were
-     actually produced with, so it has to be generated rather than supplied. -->
+`sensitivity` pulls in a large dependency tree (`dtwclust`, `shiny`, `sf` and
+their own dependencies), none of which this project calls directly. On a managed
+HPC system, `sf` and `s2` may need `gdal-bin` and `libabsl-dev`: load the
+corresponding modules if `renv::restore()` reports them as missing. On sciCORE
+the Posit Package Manager binaries are incompatible, so set
+`RENV_CONFIG_PPM_ENABLED=FALSE` and let renv compile from source.
 
 All paths are resolved from the project root by `here`, so scripts run
 identically from RStudio (open `asynchrony.Rproj`), from the command line
 (`Rscript analysis/01_illustrative_example.R`), and from a cluster job. No
 script changes the working directory.
 
-sensitivity pulls in a large dependency tree (dtwclust, shiny, sf and their own dependencies), none of which this project calls directly. On a managed HPC system, sf and s2 may need gdal-bin and libabsl-dev — load the corresponding modules if renv::restore() reports them as missing.
-
 ## Reproducing the results
 
 Scripts 05, 06 and 07 read what 04 writes; the rest are independent. The first
-script of a session compiles both odin models, which adds a few seconds.
+script of a session compiles the odin models, which adds a few seconds.
 
 | Script | Paper element | Outputs | Runtime |
 |---|---|---|---|
 | `01_illustrative_example.R` | Figure 2, Table 2, Figure S1 | `figure2_illustrative_example.png`, `figureS1_interruption.png`, `table2_illustrative_example.csv` | ~10 min |
 | `02_illustrative_example_vector_model.R` | Figure S2 | `figureS2_sis_vs_ross_macdonald.png` | seconds |
-| `03_intervention_duration.R` | Figure S6 | `figureS6_intervention_duration.png` | ~1 min |
-| `04_sensitivity_simulations.R` | Table S2; inputs to 05 and 07 | `df_simulations.csv`, `sobol_*.csv` | hours, cluster |
-| `05_sensitivity_figures.R` | Figure 3, Figures S3, S5, S7, Table S1 | `figure3_sensitivity_AIG.png`, `figureS3_sensitivity_AIGR.png`, `figureS5_near_elimination.png`, `figureS7_recovery_duration_heatmap.png`, `tableS1_metric_quantiles.csv` | ~1 min |
-| `06_decision_trees.R` | Figure 4, Figures S8, S9, S10, S11 | `figure4_decision_tree.png`, `figureS8_decision_tree_thresholds.png`, `figureS9_bootstrap_stability.png`, `figureS10_bootstrap_tree_size.png`, `figureS11_decision_tree_AIGR.png` | ~5 min |
-| `07_negative_aig_cases.R` | Figure S12, Table S3 | `figureS12_negative_aig_cases.png` | seconds |
-| `08_case_studies.R` | Figure 5, Figure S13, Table S4 (metrics) | `figure5_case_studies.png`, `figureS13_case_studies_interruption.png`, `tableS4_case_studies.csv` | ~40 min |
+| `03_intervention_duration.R` | Figure S5 | `figureS5_intervention_duration.png` | ~1 min |
+| `04_sensitivity_simulations.R` | Table S2; inputs to 05, 06 and 07 | `df_simulations.csv`, `sobol_*.csv` | hours, cluster |
+| `05_sensitivity_figures.R` | Figure 3, Figures S3, S4, S6, Table S1 | `figure3_sensitivity_AIG.png`, `figureS3_sensitivity_AIGR.png`, `figureS4_near_elimination.png`, `figureS6_recovery_duration_heatmap.png`, `tableS1_metric_quantiles.csv` | ~1 min |
+| `06_decision_trees.R` | Figure 4, Figures S7, S8, S9, S10 | `figure4_decision_tree.png`, `figureS7_decision_tree_thresholds.png`, `figureS8_bootstrap_stability.png`, `figureS9_bootstrap_tree_size.png`, `figureS10_decision_tree_AIGR.png` | ~5 min |
+| `07_negative_aig_cases.R` | Figure S11, Table S3 | `figureS11_negative_aig_cases.png` | seconds |
+| `08_case_studies.R` | Figure 5, Figure S12, Table S4 (metrics) | `figure5_case_studies.png`, `figureS12_case_studies_interruption.png`, `tableS4_case_studies.csv` | ~40 min |
 | `09_floquet_exponents.R` | Table S4 (Floquet exponents) | `tableS4_floquet_exponents.csv` | seconds |
 
-Figure 1 is a schematic and has no code.
-
-Every analysis in the paper has code here. One caveat: the Figure S7 heatmap in
-`05` was reimplemented from `df_simulations.csv` rather than carried over, so
-check it against the published version.
+Figure 1 is a schematic and has no code. Table S2 is `sobol_AIG_S2.csv`,
+transcribed as a lower-triangular matrix; the parameter order in the paper
+differs from the column order of the CSV.
 
 ### The sensitivity analysis
 
-`04` runs 10,000 parameter sets for the simulation database and a Sobol design
-of the same size, two ODE solves each. It is the only script that needs a
-cluster; see `inst/hpc/sensitivity_simulations.sbatch`. The number of workers is
-detected from `SLURM_CPUS_PER_TASK`, so setting `--cpus-per-task` is enough and
-nothing in the R code has to change.
+`04` builds two things. The simulation database is 10,000 Latin hypercube
+parameter sets, two ODE solves each. The Sobol design is derived from the same
+10,000 draws but has `10,000 * (2k + 2) = 180,000` rows for `k = 8` parameters,
+again two solves each: that is what needs a cluster, and why
+`AIG_AIGR_computation()` checkpoints. See
+`inst/hpc/sensitivity_simulations.sbatch`. The number of workers is detected
+from `SLURM_CPUS_PER_TASK`, so setting `--cpus-per-task` is enough and nothing
+in the R code has to change.
 
-Parameter sets whose equilibrium prevalence solves to zero, i.e. `R0 < 1` in
-both areas or below 1 in one and barely above in the other, are excluded from
-the Sobol indices; the paper reports 163 such sets out of 10,000.
+A parameter set is **viable** when both patches have a positive endemic
+equilibrium. Where the system-level reproduction number is at most 1, the
+disease-free state is the only equilibrium, both trajectories are identically
+zero, and the metrics degenerate asymmetrically: `AIG = 0` is a finite number
+while `AIGR = 0/0` is undefined. Two things follow.
 
-The Latin hypercube designs and the Sobol bootstrap use fixed seeds
-(`SEED_LHS1`, `SEED_LHS2`, `SEED_SOBOL` at the top of the script), so the whole
-chain is reproducible. Changing them changes every downstream figure.
+- `04` restricts the Sobol design to draws whose **every** one of the `2k + 2`
+  blocks is viable, not just the two source samples, and rebuilds the design on
+  the surviving indices so the paired structure the estimator relies on is
+  preserved.
+- `05`, `06` and `07` read the database through `load_simulation_database()`,
+  which drops the non-viable rows. Reading `df_simulations.csv` directly would
+  put the AIG analyses and the AIGR analyses on different samples, since the
+  latter drop those rows through their own `is.finite()` guards.
 
-The derived CSVs are committed, so `05` and `07` can be re-run without repeating
-`04`.
+The Latin hypercube designs use fixed seeds (`SEED_LHS1`, `SEED_LHS2` at the top
+of the script), so the designs and the database are reproducible. Changing them
+changes every downstream figure.
+
+### Committed data
+
+To let `05`, `06` and `07` be re-run without repeating `04`, `data/` contains:
+
+```
+df_simulations.csv        one row per Latin hypercube parameter set
+sobol_AIG.csv             first-order and total indices, AIG per year
+sobol_AIGR.csv            the same for AIGR per year
+sobol_AIGR_rank.csv       the same on ranks
+sobol_AIG_S2.csv          second-order indices (Supplementary Table S2)
+sobol_AIGR_S2.csv         the same for AIGR per year
+sobol_AIGR_rank_S2.csv    the same on ranks
+```
+
+`LHS1.csv`, `LHS2.csv` and `sobol_design_Y.csv` are not committed: the first two
+are regenerated deterministically from their seeds, and the third is the
+180,000-row evaluation of the full Sobol design, needed only inside `04`.
 
 ## Notes for readers of the code
 
@@ -166,7 +204,7 @@ The derived CSVs are committed, so `05` and `07` can be re-run without repeating
   design uses day 730 over 35,000 days. The difference is cosmetic and returns
   identical metrics, because the model sits at the endemic equilibrium until the
   intervention starts and `compute_metrics()` locates its window from those same
-  two arguments. Both functions now take them as arguments if you want to align
+  two arguments. Both functions take them as arguments if you want to align
   them anyway.
 - **AIGR near elimination.** When a synchronous run has already eliminated
   transmission inside the metric window, the AIGR denominator is zero and the
@@ -188,12 +226,15 @@ The derived CSVs are committed, so `05` and `07` can be re-run without repeating
   simulations open with a pre-intervention year so the endemic equilibrium is
   visible on the figures. `09` drops those days before integrating, and
   `check_schedule_periodicity()` refuses any window that is not a period.
-- **Randomness in the trees.** `06` depends on the RNG twice: `rpart`'s
-  10-fold cross-validation assigns folds at random, and the stability analysis
-  resamples the database 500 times. One `set.seed(123)` at the top of the
-  script covers both.
+- **Randomness in the trees.** `06` depends on the RNG twice: `rpart`'s 10-fold
+  cross-validation assigns folds at random, and the stability analysis resamples
+  the database 500 times. One `set.seed(42)` at the top of the script covers
+  both.
 - **Parallelism.** The batch loops fork with `mclapply()`, so workers inherit
   the already-compiled odin model. On Windows they fall back to a single core.
+  On a cluster, pin the BLAS to one thread per process: without it, each fork
+  spawns its own BLAS threads and throughput collapses. The sbatch template
+  does this.
 
 ## References
 
@@ -208,9 +249,15 @@ The derived CSVs are committed, so `05` and `07` can be re-run without repeating
 - Wang W. & Zhao X.-Q. (2008) Threshold dynamics for compartmental epidemic
   models in periodic environments. *Journal of Dynamics and Differential
   Equations* 20(3), 699-717.
+- Saltelli A. (2002) Making best use of model evaluations to compute sensitivity
+  indices. *Computer Physics Communications* 145(2), 280-297.
+- Breiman L. et al. (1984) *Classification and Regression Trees*. Chapman and
+  Hall/CRC.
 - FitzJohn R. et al. (2025) odin: ODE generation and integration. R package.
 - Danesh G. et al. (2023) TiPS: rapidly simulating trajectories and phylogenies
   from compartmental models. *Methods in Ecology and Evolution* 14(2), 487-495.
+- Iooss B. et al. (2026) sensitivity: global sensitivity analysis of model
+  outputs and importance measures. R package.
 
 ## Licence
 
