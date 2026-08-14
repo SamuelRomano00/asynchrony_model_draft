@@ -5,11 +5,12 @@
 # first.
 #
 # The simulation database only keeps aggregated metrics, not the incidence time
-# series, so the trajectories have to be replayed. Ten rows times two scenarios
-# is twenty ODE solves: a few seconds, no parallelism needed.
+# series, so the trajectories have to be replayed. Two ODE solves per parameter
+# set: a few seconds, no parallelism needed.
 #
 # Outputs:
-#   figures/figureS11_negative_aig_cases.png       the assembled 5x2 grid
+#   figures/figureS11_negative_aig_cases.png       the assembled grid, two
+#                                                  parameter sets per row
 #   figures/figureS11_negative_aig_cases/case_*.png one panel per parameter set
 
 source(here::here("R", "setup.R"))
@@ -18,7 +19,11 @@ source(here::here("R", "setup.R"))
 # Parameter sets
 # --------------------------------------------------------------------------
 
-params <- read.csv(data_path("df_simulations.csv")) %>%
+# Parameter sets with no endemic equilibrium have AIG_area1 == 0 and so would
+# never be selected here anyway, but the same loader is used as in 05 and 06 so
+# that every count reported from the database refers to the same sample. See
+# load_simulation_database() in R/batch.R.
+params <- load_simulation_database() %>%
   filter(AIG_area1 < 0) %>%
   arrange(AIG_year_area1)
 
@@ -32,13 +37,13 @@ cat("Parameter sets with a negative AIG:", nrow(params), "\n")
 # trajectories reproduced are exactly those that produced these negative AIGs
 # and not merely nearby ones.
 simulate_one_case <- function(row) {
-
+  
   n_days <- 30000
   N <- c(1000, 1000)
   start_interv <- 365
   nb_studied_cycles <- 6
   length_intervention <- row$time_intervention
-
+  
   params_row <- list(
     R0 = c(row$R0_1, row$R0_2),
     p = c(row$p_12, row$p_21),
@@ -48,21 +53,21 @@ simulate_one_case <- function(row) {
     z0 = c(row$z0_1, row$z0_2),
     r = row$r
   )
-
+  
   simulations <- simulate_sis(n_days, start_interv, length_intervention, N, params_row)
-
+  
   metrics <- compute_metrics(simulations$asynchronous$annual_incidence$value,
                              simulations$synchronous$annual_incidence$value,
                              n_days, start_interv, length_intervention,
                              nb_studied_cycles)
-
+  
   to_long <- function(simulation, scenario_name) {
     simulation$annual_incidence %>%
       mutate(area = ifelse(variable == "z[1]", "Area1", "Area2"),
              scenario = scenario_name) %>%
       select(t, value, area, scenario)
   }
-
+  
   list(incidence = bind_rows(to_long(simulations$synchronous, "Synchronous"),
                              to_long(simulations$asynchronous, "Asynchronous")),
        metrics = metrics,
@@ -91,23 +96,23 @@ if (!all(check$match)) {
 # Heights are derived per area from the incidence actually reached in the
 # plotting window, because these ten cases span very different scales.
 build_panel <- function(case) {
-
+  
   li <- case$length_intervention
   year_start_plot <- 0
   year_end_plot <- max(12, ceiling(1 + 6 * li + 2))
-
+  
   max_by_area <- case$incidence %>%
     filter(t / 365 >= year_start_plot, t / 365 <= year_end_plot) %>%
     group_by(area) %>%
     summarise(m = max(value, na.rm = TRUE), .groups = "drop")
   max_vec <- setNames(max_by_area$m, max_by_area$area)
-
+  
   metrics_labels <- data.frame(
     area = c("Area1", "Area2"),
     value = c(paste0("AIG per year: ", round(case$metrics["AIG_year_area1"])),
               paste0("AIG per year: ", round(case$metrics["AIG_year_area2"])))
   )
-
+  
   plot_incidence_panel(incidence_i = case$incidence,
                        metrics_labels_i = metrics_labels,
                        length_intervention_i = li,

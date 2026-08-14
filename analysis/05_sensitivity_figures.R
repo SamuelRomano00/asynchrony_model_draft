@@ -15,7 +15,16 @@
 
 source(here::here("R", "setup.R"))
 
-df <- read.csv(data_path("df_simulations.csv"))
+# Parameter sets with no endemic equilibrium are excluded here rather than
+# figure by figure: their AIG is a finite zero while their AIGR is undefined, so
+# reading the CSV directly would put the AIG and AIGR panels on different
+# samples. See load_simulation_database() in R/batch.R.
+df <- load_simulation_database()
+
+# The Sobol indices are computed on a design that was restricted the same way in
+# 04_sensitivity_simulations.R, on the stricter condition that every one of the
+# 2k+2 blocks of a draw be viable. Both sides of this script therefore describe
+# viable parameter sets only.
 sobol_AIG <- read.csv(data_path("sobol_AIG.csv"))
 sobol_AIGR <- read.csv(data_path("sobol_AIGR.csv"))
 
@@ -43,19 +52,19 @@ sobol_AIGR <- read.csv(data_path("sobol_AIGR.csv"))
 #' eliminated transmission, would otherwise corrupt the binning.
 make_metric_hist <- function(data, metric, title, subtitle = NULL, x_label,
                              binwidth = NULL, percent = FALSE) {
-
+  
   values <- data[[metric]]
   first_centile <- quantile(values, 0.01, na.rm = TRUE)
   last_centile <- quantile(values, 0.99, na.rm = TRUE)
   quantile75 <- quantile(values, 0.75, na.rm = TRUE)
   quantile90 <- quantile(values, 0.90, na.rm = TRUE)
-
+  
   data_filtered <- data %>%
     filter(is.finite(.data[[metric]]),
            .data[[metric]] >= first_centile,
            .data[[metric]] <= last_centile)
   filtered_values <- data_filtered[[metric]]
-
+  
   # AIG has a natural fixed unit (cases per year per 1000), so a fixed bin width
   # is meaningful; AIGR is a dimensionless ratio, so its bins are derived from
   # the observed range instead.
@@ -64,7 +73,7 @@ make_metric_hist <- function(data, metric, title, subtitle = NULL, x_label,
   }
   breaks_seq <- seq(min(filtered_values), max(filtered_values) + binwidth, by = binwidth)
   peak <- max(graphics::hist(filtered_values, breaks = breaks_seq, plot = FALSE)$counts)
-
+  
   p <- ggplot(data_filtered, aes(x = .data[[metric]])) +
     geom_histogram(binwidth = binwidth, boundary = 0, fill = "skyblue", color = "white") +
     labs(x = x_label, y = "Frequency", title = title, subtitle = subtitle) +
@@ -78,13 +87,13 @@ make_metric_hist <- function(data, metric, title, subtitle = NULL, x_label,
           axis.title.x = element_text(size = 10),
           axis.text.x = element_text(size = 7.5),
           axis.text.y = element_text(size = 7.5))
-
+  
   if (percent) {
     p <- p + scale_x_continuous(labels = scales::percent)
   } else {
     p <- p + scale_x_continuous(breaks = seq(0, 200, by = 10))
   }
-
+  
   p
 }
 
@@ -122,7 +131,7 @@ plot_sobol_indices <- function(sobol_df) {
 #' @param y_percent Whether to format the y axis as a percentage.
 #' @return A patchwork object.
 build_profile_panels <- function(metric, y_label, y_percent = FALSE) {
-
+  
   specs <- list(
     list(param = "R0_1", bin = 0.1, label = "R0 in area 1", y_name = FALSE),
     list(param = "R0_2", bin = 0.1, label = "R0 in area 2", y_name = FALSE),
@@ -135,20 +144,20 @@ build_profile_panels <- function(metric, y_label, y_percent = FALSE) {
     list(param = "rinv", bin = 10, label = "Duration of recovery", y_name = FALSE),
     list(param = "time_intervention", bin = 0.5, label = "Duration of the intervention", y_name = FALSE)
   )
-
+  
   panels <- lapply(specs, function(s) {
     plot_metric_by_parameter(df, s$param, metric, s$bin, s$label,
                              y_name = s$y_name, y_label = y_label,
                              y_percent = y_percent)
   })
-
+  
   # A common y scale across all ten panels, so their slopes are comparable.
   y_ranges <- sapply(panels, function(p) ggplot_build(p)$layout$panel_scales_y[[1]]$range$range)
   ylim_common <- c(min(y_ranges[1, ]), max(y_ranges[2, ]))
-
+  
   ((panels[[1]] | panels[[2]] | panels[[3]] | panels[[4]]) /
-     (panels[[5]] | panels[[6]]) /
-     (panels[[7]] | panels[[8]] | panels[[9]] | panels[[10]])) +
+      (panels[[5]] | panels[[6]]) /
+      (panels[[7]] | panels[[8]] | panels[[9]] | panels[[10]])) +
     plot_layout(guides = "collect", axis_titles = "collect_y") +
     plot_annotation(title = "C.",
                     theme = theme(plot.title = element_text(face = "bold", size = 10))) &
@@ -267,12 +276,17 @@ ggsave(figure_path("figureS6_recovery_duration_heatmap.png"),
 # Summary quantiles
 # --------------------------------------------------------------------------
 
+# `n` is reported alongside the quantiles so that any remaining difference in
+# sample size between the AIG and AIGR rows is visible in the table itself
+# rather than hidden by the is.finite() filter. After
+# load_simulation_database(), the four rows should share the same n.
 stats <- df %>%
   select(AIG_year_area1, AIGR_area1, AIG_year_area2, AIGR_area2) %>%
   tidyr::pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
   filter(is.finite(value)) %>%
   group_by(variable) %>%
-  summarise(min = min(value),
+  summarise(n = n(),
+            min = min(value),
             max = max(value),
             q1 = quantile(value, 0.01),
             q99 = quantile(value, 0.99),
@@ -284,7 +298,9 @@ stats <- df %>%
 
 # Formatted for direct transcription into Supplementary Table S1
 ratio_rows <- grepl("^AIGR", stats$variable)
-value_cols <- setdiff(names(stats), "variable")
+# `n` is a count, not a metric value: it must not be scaled by 100 or suffixed
+# with a percent sign on the AIGR rows.
+value_cols <- setdiff(names(stats), c("variable", "n"))
 
 stats_formatted <- stats
 stats_formatted[value_cols] <- lapply(value_cols, function(col) {

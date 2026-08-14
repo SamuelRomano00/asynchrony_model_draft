@@ -30,7 +30,7 @@ detect_ncores <- function() {
   if (nzchar(slurm_cpus_per_task)) {
     return(as.integer(slurm_cpus_per_task))
   }
-
+  
   slurm_cpus_per_node <- Sys.getenv("SLURM_JOB_CPUS_PER_NODE")
   if (nzchar(slurm_cpus_per_node)) {
     # Can be formatted as e.g. "24(x2)" for a multi-node job; keep the leading
@@ -40,7 +40,7 @@ detect_ncores <- function() {
       return(parsed)
     }
   }
-
+  
   ncores <- max(1, parallel::detectCores() - 1)
   warning("detect_ncores(): no SLURM core count found, falling back to ",
           "parallel::detectCores() - 1 = ", ncores, ", which reflects the ",
@@ -88,14 +88,14 @@ simulate_design_row <- function(row, n_days, start_interv, nb_studied_cycles, N,
     z0 = z0,
     r = r
   )
-
+  
   simulations <- simulate_sis(n_days, start_interv, row$time_intervention, N, params)
-
+  
   metrics <- compute_metrics(simulations$asynchronous$annual_incidence$value,
                              simulations$synchronous$annual_incidence$value,
                              n_days, start_interv, row$time_intervention,
                              nb_studied_cycles)
-
+  
   list(x0 = x0, z0 = z0, r = r, metrics = metrics,
        viable = x0[1] > 0 && x0[2] > 0)
 }
@@ -113,7 +113,13 @@ simulate_design_row <- function(row, n_days, start_interv, nb_studied_cycles, N,
 #' @param nb_studied_cycles On/off cycles in the metric window.
 #' @return A data frame with one row per design row: the input parameters, the
 #'   resolved initial conditions, the controlled reproduction numbers `RC_i`,
-#'   and every [compute_metrics()] output.
+#'   `viable`, and every [compute_metrics()] output.
+#'
+#' Every design row is kept, including the ones with no endemic equilibrium, so
+#' that the database describes the whole design and the exclusion stays visible
+#' rather than being silently baked into the file. Those rows are flagged
+#' `viable = 0`; [load_simulation_database()] is what drops them, and every
+#' analysis script goes through it.
 metrics_computation <- function(myvars, ncores = detect_ncores(), checkpoint_every = 2000,
                                 n_days = 30000, start_interv = 365,
                                 nb_studied_cycles = 6) {
@@ -122,35 +128,41 @@ metrics_computation <- function(myvars, ncores = detect_ncores(), checkpoint_eve
   # frame: `matrix[i, ]` returns a plain named vector. sobolSalt() hands back a
   # matrix, so coerce rather than trust the caller.
   myvars <- as.data.frame(myvars)
-
+  
   n <- nrow(myvars)
   N <- c(1000, 1000)
-
+  
   cat("metrics_computation(): running", n, "rows on", ncores, "core(s)\n")
-
+  
   col_names <- c("x0_1", "x0_2", "z0_1", "z0_2", "p_12", "p_21", "r", "rinv",
                  "time_intervention", "omega_1", "omega_2", "R0_1", "R0_2",
-                 "RC_1", "RC_2", METRIC_NAMES)
-
+                 "RC_1", "RC_2", "viable", METRIC_NAMES)
+  
   process_one_row <- function(i) {
     row <- myvars[i, ]
     res <- simulate_design_row(row, n_days, start_interv, nb_studied_cycles, N)
-
+    
+    # `out` is assembled with c(), which coerces everything to numeric, so the
+    # flag is written as 1/0 rather than TRUE/FALSE. That matches the `failed`
+    # column of AIG_AIGR_computation(); load_simulation_database() converts it
+    # back, because subsetting a data frame with a numeric column would index
+    # by position instead of filtering.
     out <- c(res$x0[1], res$x0[2], res$z0[1], res$z0[2], row$p_12, row$p_21,
              res$r, row$rinv, row$time_intervention, row$omega_1, row$omega_2,
              row$R0_1, row$R0_2,
              row$R0_1 * (1 - row$omega_1), row$R0_2 * (1 - row$omega_2),
+             as.numeric(res$viable),
              res$metrics)
     names(out) <- col_names
     out
   }
-
+  
   all_chunks <- list()
   t0 <- Sys.time()
-
+  
   for (chunk_start in seq(1, n, by = checkpoint_every)) {
     chunk_idx <- chunk_start:min(chunk_start + checkpoint_every - 1, n)
-
+    
     # mc.preschedule = FALSE dispatches one row at a time instead of splitting
     # the chunk into fixed contiguous blocks. A single slow solve near an
     # elimination threshold would otherwise stall its whole block while the
@@ -158,14 +170,14 @@ metrics_computation <- function(myvars, ncores = detect_ncores(), checkpoint_eve
     chunk_results <- mclapply(chunk_idx, process_one_row,
                               mc.cores = ncores, mc.preschedule = FALSE)
     all_chunks[[length(all_chunks) + 1]] <- do.call(rbind, chunk_results)
-
+    
     cat("Rows", min(chunk_idx), "-", max(chunk_idx), "/", n, "done -",
         format(Sys.time() - t0), "\n")
-
+    
     write.csv(as.data.frame(do.call(rbind, all_chunks)),
               data_path("checkpoint_metrics_computation.csv"), row.names = FALSE)
   }
-
+  
   as.data.frame(do.call(rbind, all_chunks))
 }
 
@@ -224,7 +236,7 @@ AIG_AIGR_computation <- function(myvars, ncores = detect_ncores(),
   cat("AIG_AIGR_computation(): running", n - n_done, "remaining rows on",
       ncores, "core(s)\n")
   t0 <- Sys.time()
-
+  
   process_one_row <- function(i) {
     if (i %% 1000 == 0) {
       cat("Row", i, "/", n, "-", format(Sys.time() - t0), "\n")
@@ -238,7 +250,7 @@ AIG_AIGR_computation <- function(myvars, ncores = detect_ncores(),
       AIGR_year_area1 = unname(res$metrics["AIGR_year_area1"]),
       failed = 0)
   }
-
+  
   if (n_done < n) {
     for (chunk_start in seq(n_done + 1L, n, by = checkpoint_every)) {
       chunk_idx <- chunk_start:min(chunk_start + checkpoint_every - 1L, n)
@@ -271,8 +283,85 @@ AIG_AIGR_computation <- function(myvars, ncores = detect_ncores(),
   stopifnot("The assembled results do not cover the whole design." = nrow(results) == n)
   
   cat("Rows without an endemic equilibrium:", sum(results[, "failed"]), "/", n, "\n")
-
+  
   data.frame(AIG_year_area1 = results[, "AIG_year_area1"],
              AIGR_year_area1 = results[, "AIGR_year_area1"],
              failed = results[, "failed"])
+}
+
+# ---------------------------------------------------------------------------
+# Reading the database back
+# ---------------------------------------------------------------------------
+
+#' Read the simulation database, keeping only viable parameter sets
+#'
+#' The single entry point for every analysis script that consumes
+#' `df_simulations.csv`. Reading the file directly is a mistake: see below.
+#'
+#' @param path Path to the CSV written by [metrics_computation()].
+#' @param quiet Whether to suppress the exclusion message.
+#' @return A data frame with one row per viable parameter set, row names reset.
+#'
+#' A parameter set is viable when both patches have a positive endemic
+#' equilibrium. Where they do not, `compute_equilibrium_prevalence()` returns
+#' exactly `c(0, 0)`: the system-level reproduction number is at most 1, so the
+#' disease-free state is the only equilibrium. Both trajectories are then
+#' identically zero, and the metrics degenerate ASYMMETRICALLY:
+#'
+#'   AIG  = 0 - 0     = 0,    a finite number
+#'   AIGR = (0 - 0)/0 = NaN,  undefined
+#'
+#' Left in place, that asymmetry silently gives the AIG and the AIGR analyses
+#' different samples: the AIG histogram, its quantiles and its decision tree
+#' would carry a spike of zeros that the AIGR versions drop through their own
+#' `is.finite()` guards. It also drags the reported share of positive AIG down,
+#' since those rows are zero rather than positive. Excluding them here, once,
+#' keeps every figure and table on the same N, which is what the paper claims.
+#'
+#' The exclusion is not a numerical workaround: a parameter set with no
+#' transmission carries no information about the consequences of intervention
+#' asynchrony, because there is no epidemic to desynchronise.
+#'
+#' Databases written before `viable` existed are handled by recomputing the flag
+#' from the equilibrium prevalences already stored in the file, so an existing
+#' `df_simulations.csv` does not have to be regenerated.
+load_simulation_database <- function(path = data_path("df_simulations.csv"),
+                                     quiet = FALSE) {
+  
+  df <- read.csv(path)
+  
+  if (!"viable" %in% names(df)) {
+    if (!all(c("x0_1", "x0_2") %in% names(df))) {
+      stop("load_simulation_database(): ", basename(path), " has neither a ",
+           "`viable` column nor the `x0_1`/`x0_2` columns needed to rebuild it.")
+    }
+    df$viable <- df$x0_1 > 0 & df$x0_2 > 0
+  }
+  
+  # Written as 1/0 by metrics_computation(), as TRUE/FALSE when rebuilt above.
+  # Without this, `df[df$viable, ]` on a numeric column would index by position.
+  viable <- as.logical(df$viable)
+  
+  n_total <- nrow(df)
+  df <- df[viable, , drop = FALSE]
+  rownames(df) <- NULL
+  
+  if (!quiet) {
+    message(sprintf(paste0("load_simulation_database(): %d of %d parameter sets ",
+                           "excluded (no endemic equilibrium in at least one ",
+                           "patch); %d retained."),
+                    n_total - nrow(df), n_total, nrow(df)))
+  }
+  
+  # After the exclusion the two metrics must have the same support. If this
+  # fails, some viable parameter set produced no synchronous case inside the
+  # metric window, which the analyses below are not written to handle.
+  if (any(!is.finite(df$AIGR_area1))) {
+    warning(sprintf(paste0("load_simulation_database(): %d viable parameter ",
+                           "set(s) still have a non-finite AIGR_area1. The AIG ",
+                           "and AIGR analyses will not be run on the same rows."),
+                    sum(!is.finite(df$AIGR_area1))))
+  }
+  
+  df
 }

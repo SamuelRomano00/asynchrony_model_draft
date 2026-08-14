@@ -25,7 +25,12 @@ source(here::here("R", "setup.R"))
 # assigns folds at random, and the stability analysis resamples the database.
 set.seed(42)
 
-df <- read.csv(data_path("df_simulations.csv"))
+# Parameter sets with no endemic equilibrium are excluded before anything else.
+# Their AIG is a finite zero, so reading the CSV directly would feed the AIG
+# tree a block of rows labelled Low that the AIGR tree drops through its own
+# is.finite() guard, and would shift the top-decile threshold. See
+# load_simulation_database() in R/batch.R.
+df <- load_simulation_database()
 
 AIG_variable <- "AIG_year_area1"
 n_bootstrap <- 500
